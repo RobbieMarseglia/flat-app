@@ -25,6 +25,7 @@
 let RADIUS = 40;
 const nodes = [];
 var id = 0;
+var highId = 0;
 
 class Node {
 
@@ -40,7 +41,16 @@ class Node {
         ctx.save();
         ctx.beginPath();
         ctx.arc(this.x, this.y, RADIUS, 0, 2 * Math.PI);
-        ctx.stroke();
+        ctx.fill();
+        console.log(highId);
+        if (this.id == highId) {
+            ctx.strokeStyle = "#ff0000";
+            ctx.stroke();
+        } else {
+            console.log("black");
+            ctx.strokeStyle = "#ffffff";
+            ctx.stroke();
+        }
         ctx.restore();
     }
 
@@ -51,8 +61,8 @@ var MouseEvent = function(canvas, callback) {
     function coordinates(event) {
         var dimensions = canvas.getBoundingClientRect();
         return {
-            x: event.clientX - dimensions.top,
-            y: event.clientY - dimensions.left
+            x: event.clientX - dimensions.left,
+            y: event.clientY - dimensions.top
         }
     }
 
@@ -79,55 +89,112 @@ var MouseEvent = function(canvas, callback) {
 
 }
 
-function isNodeClicked(node, x, y) {
-    var dx = node.x - x;
-    var dy = node.y - y;
-    console.log(node.x, node.y);
-    console.log(x,y);
-    if (dx*dx + dy*dy < RADIUS*RADIUS) {
-        return true;
+// function isNodeClicked(node, x, y) {
+//     var dx = node.x - x;
+//     var dy = node.y - y;
+//     if (dx*dx + dy*dy < RADIUS*RADIUS) {
+//         return true;
+//     }
+//     return false;
+// }
+
+function nodeUnderMouse(x, y) {
+    for (let i=0; i< nodes.length; i++) {
+        var node = nodes[i];
+        var dx = node.x - x;
+        var dy = node.y - y;
+        if (dx*dx + dy*dy < RADIUS*RADIUS) {
+            return i;
+        }
     }
-    return false;
+    return -1;
 }
 
 var canvas = document.getElementById('flat-canvas');
 var ctx = canvas.getContext('2d');
+ctx.fillStyle = "#fcfcfc";
 var fromX = 0;
 var fromY = 0;
 
-var state = new Node(id, 100, 100);
-state.draw(ctx);
+var s = new Node(id, 100, 100);
+nodes.push(s);
+s.draw(ctx);
+id++
 
-var mtt = new MouseEvent(canvas,
+var state = null;
+
+var me = new MouseEvent(canvas,
     function(eventType, x, y) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         switch(eventType) {
 
             case 'down':
                 fromX = x;
                 fromY = y;
-                if (isNodeClicked(state, x, y)) {
+
+                var stateId = nodeUnderMouse(x,y);
+                if (stateId != -1) {
+                    state = nodes[stateId];
                     state.dragging = true;
+                    canvas.style.cursor = "move";
+                } else {
+                    var s = new Node(id, x, y);
+                    nodes.push(s);
+                    highId = id;
+                    id++;
                 }
+
+                console.log("down");
+                // } else {
+                //     var s = new Node(id, x, y);
+                //     nodes.push(s);
+                //     highId = id;
+                //     s.draw(ctx);
+                //     id++;
+                // }
+
+                // if (isNodeClicked(state, x, y)) {
+                //     state.dragging = true;
+                // }
                 break;
 
             case 'up':
-                state.dragging = false;
+                if (state) {
+                    if (state.dragging) {
+                        state.dragging = false;
+                        canvas.style.cursor = "auto";
+                    } 
+                }
                 break;
 
             case 'move':
+                var stateId = nodeUnderMouse(x,y);
+                if (stateId != -1) {
+                    canvas.style.cursor = "move";
+                } else {
+                    canvas.style.cursor = "auto";
+                }
+
                 var dx = x - fromX;
                 var dy = y - fromY;
                 fromX = x;
                 fromY = y;
 
-                if (state.dragging) {
-                    state.x += dx;
-                    state.y += dy;
+                if (state) {
+                    if (state.dragging) {
+                        state.x += dx;
+                        state.y += dy;
+                    }
                 }
         }
 
-        state.draw(ctx);
+        if (nodes.length != 0) {
+            if (state && state.dragging) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i=0; i<nodes.length; i++) {
+                    nodes[i].draw(ctx);
+                }
+            }
+        }
     }
 );
