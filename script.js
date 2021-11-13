@@ -1,7 +1,8 @@
 let RADIUS = 40;
-const nodes = [];
+const nodes = {};
 var id = 0;
 var highId = 0;
+var startId = 0;
 
 class Node {
 
@@ -14,7 +15,6 @@ class Node {
     }
 
     draw(ctx) {
-        ctx.save();
         ctx.beginPath();
         ctx.arc(this.x, this.y, RADIUS, 0, 2 * Math.PI);
         ctx.fill();
@@ -22,8 +22,36 @@ class Node {
             ctx.strokeStyle = "#ff0000";
         }
         ctx.stroke();
-        ctx.restore();
+        ctx.strokeStyle = "#000000";
+        if (this.id == startId) {
+            ctx.beginPath();
+            // define function when needed
+            var headLength = 10;
+            var toX = this.x - RADIUS;
+            var fromX = toX - 40;
+            var angle = Math.atan2(0, 40);
+            ctx.moveTo(fromX, this.y);
+            ctx.lineTo(toX, this.y);
+            ctx.lineTo(toX - headLength*Math.cos(angle - Math.PI/6), this.y - headLength*Math.sin(angle - Math.PI/6));
+            ctx.moveTo(toX, this.y);
+            ctx.lineTo(toX - headLength*Math.cos(angle + Math.PI/6), this.y - headLength*Math.sin(angle + Math.PI/6));
+            ctx.stroke()
+        }
     }
+
+}
+
+// use eventlisteners instead?
+var KeyboardEvent = function(canvas, callback) {
+
+    function keyPress(event) {
+        // only prevent default if node is highlighted && relevant key is pressed (?)
+        console.log("Hi");
+        event.preventDefault();
+        callback(event.key);
+    }
+
+    canvas.onkeypress = keyPress;
 
 }
 
@@ -61,7 +89,7 @@ var MouseEvent = function(canvas, callback) {
 }
 
 function nodeUnderMouse(x, y) {
-    for (let i=0; i< nodes.length; i++) {
+    for (var i in nodes) {
         var node = nodes[i];
         var dx = node.x - x;
         var dy = node.y - y;
@@ -69,7 +97,7 @@ function nodeUnderMouse(x, y) {
             return i;
         }
     }
-    return -1;
+    return -1
 }
 
 var canvas = document.getElementById('flat-canvas');
@@ -79,6 +107,27 @@ var fromX = 0;
 var fromY = 0;
 
 var state = null;
+
+var ke = new KeyboardEvent(canvas,
+    function(keyPressed) {
+
+        console.log(keyPressed);
+
+        switch(keyPressed){
+
+            case 's':
+                startId = highId;
+        }
+
+        if (state && (state.dragging || eventType == "down")) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (var i in nodes) {
+                nodes[i].draw(ctx);
+            }
+        }
+
+    }    
+);
 
 var me = new MouseEvent(canvas,
     function(eventType, x, y) {
@@ -93,11 +142,11 @@ var me = new MouseEvent(canvas,
                 if (stateId != -1) {
                     state = nodes[stateId];
                     state.dragging = true;
-                    highId = state.id;
+                    highId = stateId;
                     canvas.style.cursor = "move";
                 } else {
                     var s = new Node(id, x, y);
-                    nodes.push(s);
+                    nodes[id] = s;
                     highId = id;
                     id++;
                     state = s;
@@ -136,7 +185,7 @@ var me = new MouseEvent(canvas,
 
         if (state && (state.dragging || eventType == "down")) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let i=0; i<nodes.length; i++) {
+            for (var i in nodes) {
                 nodes[i].draw(ctx);
             }
         }
