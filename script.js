@@ -1,16 +1,70 @@
-// Git push test
-
 let RADIUS = 40; // state radius
+let CHEVRON = RADIUS/4; // length of transition chevron
 const nodes = []; // array of states
-var id = 0; // unique state ID
-var highId = 0; // ID of highlighted state
-var startId = 0; // ID of start state
+const edges = [];
+var sid = 0; // unique state ID
+var tid = 0; // unique transition ID
+var highSid = 0; // ID of highlighted state
+var highTid = 0; // ID of highlighted transition
+var startSid = 0; // ID of start state
+var startTid = 0; // ID of start transition (necessary?)
 
-// class Edge {
+// class Start {
 
-//     constructor()
+//     constructor(node) {
+
+//     }
 
 // }
+
+class Edge {
+
+    constructor(id, fromNode, toNode) {
+        this.id = id;
+        this.fromNode = fromNode;
+        this.toNode = toNode;
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        if (this.fromNode == null) { // start edge
+            var toX = this.toNode.x-RADIUS;
+            var toY = this.toNode.y;
+            var fromX = toX-RADIUS;
+            var fromY = toY;
+            var dx = RADIUS;
+            var dy = 0;
+            var angle = Math.atan2(dy, dx);
+        } else { // edge between nodes
+            var toX = this.toNode.x;
+            var toY = this.toNode.y;
+            var fromX = this.fromNode.x;
+            var fromY = this.fromNode.y;
+
+            // Calculates line angle between centres of each node
+            var dx = toX-fromX;
+            var dy = toY-fromY;
+            var angle = Math.atan2(dy, dx);
+
+            // 'Remove' portion of edge contained within nodes
+            fromX += Math.cos(angle)*RADIUS;
+            fromY += Math.sin(angle)*RADIUS;
+            toX -= Math.cos(angle)*RADIUS;
+            toY -= Math.sin(angle)*RADIUS;
+        }
+
+        // Draw connecting line
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(toX, toY);
+
+        // Draw chevron at end of edge
+        ctx.lineTo(toX-CHEVRON*Math.cos(angle-Math.PI/6), toY-CHEVRON*Math.sin(angle-Math.PI/6));
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX-CHEVRON*Math.cos(angle+Math.PI/6), toY-CHEVRON*Math.sin(angle+Math.PI/6));
+        ctx.stroke();
+    }
+
+}
 
 class Node {
 
@@ -20,11 +74,12 @@ class Node {
         this.y = y;
         this.accept = false;
         this.dragging = false;
+        this.neighbours = [];
     }
 
     draw(ctx) {
         // Colour state red if highlighted
-        if (this.id == highId) {
+        if (this.id == highSid) {
             ctx.strokeStyle = "#ff0000";
         }
 
@@ -37,38 +92,24 @@ class Node {
         // Draw smaller circle inside to denote accept state
         if (this.accept) {
             ctx.beginPath();
-            ctx.arc(this.x, this.y, RADIUS - 8, 0, 2*Math.PI);
+            ctx.arc(this.x, this.y, RADIUS-8, 0, 2*Math.PI);
             ctx.fill();
             ctx.stroke();
         }
 
         ctx.strokeStyle = "#000000"; // revert colour to black
-
-        // Add start arrow if start state
-        if (this.id == startId) {
-            ctx.beginPath();
-            // TODO: define function when needed
-            var headLength = 10;
-            var toX = this.x - RADIUS;
-            var fromX = toX - 40;
-            var angle = Math.atan2(0, 40);
-            ctx.moveTo(fromX, this.y);
-            ctx.lineTo(toX, this.y);
-            ctx.lineTo(toX - headLength*Math.cos(angle - Math.PI/6), this.y - headLength*Math.sin(angle - Math.PI/6));
-            ctx.moveTo(toX, this.y);
-            ctx.lineTo(toX - headLength*Math.cos(angle + Math.PI/6), this.y - headLength*Math.sin(angle + Math.PI/6));
-            ctx.stroke()
-        }
     }
 
 }
 
+// Might get this to return the node instead of the ID
 function nodeUnderMouse(x, y) {
     for (var i=nodes.length-1; i >= 0 ; i--) {
         var node = nodes[i];
-        var dx = node.x - x;
-        var dy = node.y - y;
-        if (dx*dx + dy*dy < RADIUS*RADIUS) {
+        var dx = node.x-x;
+        var dy = node.y-y;
+        // Use Pythagoras' Theorem to check if mouse is within node's area
+        if (dx*dx+dy*dy < RADIUS*RADIUS) {
             return i;
         }
     }
@@ -77,17 +118,24 @@ function nodeUnderMouse(x, y) {
 
 function coordinates(event) {
     var dimensions = canvas.getBoundingClientRect();
+    // Account for offset of canvas by subtracting its top most- and left most-position in the window
     return {
-        x: event.clientX - dimensions.left,
-        y: event.clientY - dimensions.top
+        x: event.clientX-dimensions.left,
+        y: event.clientY-dimensions.top
     }
 }
 
 function updateCanvas(eventType) {
+    // Only update canvas if user is dragging state, pressing key, or clicking mouse
     if (state && (state.dragging || eventType == "down")) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (var i=0; i < nodes.length; i++) {
+        // Draw nodes
+        for (var i=0; i<nodes.length; i++) {
             nodes[i].draw(ctx);
+        }
+        // Draw edges
+        for (var i=0; i<edges.length; i++) {
+            edges[i].draw(ctx);
         }
     }
 }
@@ -107,13 +155,24 @@ window.addEventListener("keydown",
         switch(event.key){
 
             case 's':
-                startId = highId;
+                startSid = highSid;
+                for (var i=0; i<edges.length; i++) {
+                    if (edges[i].fromNode == null) {
+                        for (var j=0; j<nodes.length; j++) {
+                            if (nodes[j].id == highSid) {
+                                edges[i].toNode = nodes[j];
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
                 break;
 
             case 'a':
                 if (nodes.length > 0) {
-                    for (var i=0; i < nodes.length; i++){
-                        if (nodes[i].id == highId) {
+                    for (var i=0; i<nodes.length; i++) {
+                        if (nodes[i].id == highSid) {
                             nodes[i].accept = !nodes[i].accept;
                             break;
                         }
@@ -128,6 +187,7 @@ window.addEventListener("keydown",
     }
 );
 
+// Check for SHIFT-Click
 canvas.addEventListener("mousedown",
     function(event) {
         var coords = coordinates(event);
@@ -137,14 +197,19 @@ canvas.addEventListener("mousedown",
         if (stateIndex != -1) {
             state = nodes[stateIndex];
             state.dragging = true;
-            highId = state.id;
+            highSid = state.id;
             canvas.style.cursor = "move";
         } else {
-            var s = new Node(id, x, y);
-            nodes.push(s);
-            highId = id;
-            id++;
-            state = s;
+            var n = new Node(sid, x, y);
+            if (nodes.length == 0){
+                var e = new Edge(tid, null, n);
+                edges.push(e);
+                tid++;
+            }
+            nodes.push(n);
+            highSid = sid;
+            sid++;
+            state = n;
         }
         updateCanvas("down");
     }
@@ -162,8 +227,8 @@ canvas.addEventListener("mousemove",
             canvas.style.cursor = "auto";
         }
 
-        var dx = x - fromX;
-        var dy = y - fromY;
+        var dx = x-fromX;
+        var dy = y-fromY;
         fromX = x;
         fromY = y;
 
@@ -187,3 +252,11 @@ canvas.addEventListener("mouseup",
         }
     }
 );
+
+// const nodeA = new Node(0, 400, 100);
+// const nodeB = new Node(0, 100, 200);
+// nodeA.draw(ctx);
+// nodeB.draw(ctx);
+
+// const edge = new Edge(0, nodeA, nodeB);
+// edge.draw(ctx);
