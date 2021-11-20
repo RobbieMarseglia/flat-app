@@ -1,7 +1,7 @@
 let RADIUS = 40; // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
 const nodes = []; // array of states
-const edges = [];
+const edges = []; // array of transitions
 var sid = 0; // unique state ID
 var tid = 0; // unique transition ID
 var highSid = 0; // ID of highlighted state
@@ -29,30 +29,41 @@ class Edge {
         ctx.beginPath();
 
         if (this.fromNode == this.toNode) { // self loop
-            var angle = Math.PI/4;
+            var angle = 5*Math.PI/16;
             var dx = Math.cos(angle)*RADIUS;
             var dy = Math.sin(angle)*RADIUS;
             var xn = this.fromNode.x;
             var yn = this.fromNode.y;
 
+            // Start of arc
             var x1 = xn-dx;
-            var y1 = yn+dy;
+            var y1 = yn-dy;
+            // End of arc
             var x2 = xn+dx;
-            var y2 = yn+dy;
+            var y2 = yn-dy;
+            // Highest point of arc
             var x3 = xn;
-            var y3 = yn+1.5*RADIUS;
+            var y3 = yn-1.7*RADIUS;
 
+            // Find circle equation from above three points
             var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
             var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
             var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
 
-            var x = -b/(2*a);
-            var y = -c/(2*a);
+            var x = -b/(2*a); // x centre
+            var y = -c/(2*a); // y centre
+            var radius = Math.hypot(x-x1, y-y1);
 
-            var r = Math.sqrt(x**2+y**2);
+            // Angle between arc centre and end of arc
+            var alpha = Math.atan2(y2-y, x2-x); 
 
-            ctx.arc(x, y, r, 0, 2*Math.PI);
-            ctx.stroke();
+            ctx.arc(x, y, radius, Math.PI-alpha, alpha); // arc is drawn outside of node area
+
+            // Draw chevron at end of arc
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
         } else {
             if (this.fromNode == null) { // start edge
                 var toX = this.toNode.x-RADIUS;
@@ -88,8 +99,8 @@ class Edge {
             ctx.lineTo(toX-CHEVRON*Math.cos(angle-Math.PI/6), toY-CHEVRON*Math.sin(angle-Math.PI/6));
             ctx.moveTo(toX, toY);
             ctx.lineTo(toX-CHEVRON*Math.cos(angle+Math.PI/6), toY-CHEVRON*Math.sin(angle+Math.PI/6));
-            ctx.stroke();
         }
+        ctx.stroke();
     }
 
 }
@@ -166,10 +177,6 @@ function updateCanvas(eventType) {
     if (state && (state.dragging || eventType == "down")) {
         ctx.clearRect(0, 0, canvas.width, canvas.height); // clear canvas
 
-        // Draw start node and start edge first
-        getFromId(startSid, nodes).draw(ctx);
-        getFromId(startTid, edges).draw(ctx);
-
         // Draw edges
         for (var i=0; i<edges.length; i++) {
             if (edges[i].id != startTid) {
@@ -183,6 +190,11 @@ function updateCanvas(eventType) {
                 nodes[i].draw(ctx);
             }
         }
+
+        // Draw start node and start edge last
+        getFromId(startSid, nodes).draw(ctx);
+        getFromId(startTid, edges).draw(ctx);
+        // TODO: messes with node layers anyway...
     }
 }
 
@@ -270,7 +282,6 @@ canvas.addEventListener("mousedown",
                 updateCanvas("down");
             }
         }
-        console.log(nodes);
     }
 );
 
