@@ -28,42 +28,68 @@ class Edge {
     draw(ctx) {
         ctx.beginPath();
 
-        // TODO: Check if fromNode == toNode (self loop)
-        if (this.fromNode == null) { // start edge
-            var toX = this.toNode.x-RADIUS;
-            var toY = this.toNode.y;
-            var fromX = toX-RADIUS;
-            var fromY = toY;
-            var dx = RADIUS;
-            var dy = 0;
-            var angle = Math.atan2(dy, dx);
-        } else { // edge between nodes
-            var toX = this.toNode.x;
-            var toY = this.toNode.y;
-            var fromX = this.fromNode.x;
-            var fromY = this.fromNode.y;
+        if (this.fromNode == this.toNode) { // self loop
+            var angle = Math.PI/4;
+            var dx = Math.cos(angle)*RADIUS;
+            var dy = Math.sin(angle)*RADIUS;
+            var xn = this.fromNode.x;
+            var yn = this.fromNode.y;
 
-            // Calculates line angle between centres of each node
-            var dx = toX-fromX;
-            var dy = toY-fromY;
-            var angle = Math.atan2(dy, dx);
+            var x1 = xn-dx;
+            var y1 = yn+dy;
+            var x2 = xn+dx;
+            var y2 = yn+dy;
+            var x3 = xn;
+            var y3 = yn+1.5*RADIUS;
 
-            // 'Remove' portion of edge contained within nodes
-            fromX += Math.cos(angle)*RADIUS;
-            fromY += Math.sin(angle)*RADIUS;
-            toX -= Math.cos(angle)*RADIUS;
-            toY -= Math.sin(angle)*RADIUS;
+            var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
+            var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
+            var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
+
+            var x = -b/(2*a);
+            var y = -c/(2*a);
+
+            var r = Math.sqrt(x**2+y**2);
+
+            ctx.arc(x, y, r, 0, 2*Math.PI);
+            ctx.stroke();
+        } else {
+            if (this.fromNode == null) { // start edge
+                var toX = this.toNode.x-RADIUS;
+                var toY = this.toNode.y;
+                var fromX = toX-RADIUS;
+                var fromY = toY;
+                var dx = RADIUS;
+                var dy = 0;
+                var angle = Math.atan2(dy, dx);
+            } else { // edge between nodes
+                var toX = this.toNode.x;
+                var toY = this.toNode.y;
+                var fromX = this.fromNode.x;
+                var fromY = this.fromNode.y;
+
+                // Calculates line angle between centres of each node
+                var dx = toX-fromX;
+                var dy = toY-fromY;
+                var angle = Math.atan2(dy, dx);
+
+                // 'Remove' portion of edge contained within nodes
+                fromX += Math.cos(angle)*RADIUS;
+                fromY += Math.sin(angle)*RADIUS;
+                toX -= Math.cos(angle)*RADIUS;
+                toY -= Math.sin(angle)*RADIUS;
+            }
+
+            // Draw connecting line
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+
+            // Draw chevron at end of edge
+            ctx.lineTo(toX-CHEVRON*Math.cos(angle-Math.PI/6), toY-CHEVRON*Math.sin(angle-Math.PI/6));
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX-CHEVRON*Math.cos(angle+Math.PI/6), toY-CHEVRON*Math.sin(angle+Math.PI/6));
+            ctx.stroke();
         }
-
-        // Draw connecting line
-        ctx.moveTo(fromX, fromY);
-        ctx.lineTo(toX, toY);
-
-        // Draw chevron at end of edge
-        ctx.lineTo(toX-CHEVRON*Math.cos(angle-Math.PI/6), toY-CHEVRON*Math.sin(angle-Math.PI/6));
-        ctx.moveTo(toX, toY);
-        ctx.lineTo(toX-CHEVRON*Math.cos(angle+Math.PI/6), toY-CHEVRON*Math.sin(angle+Math.PI/6));
-        ctx.stroke();
     }
 
 }
