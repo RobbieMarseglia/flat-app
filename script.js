@@ -7,7 +7,7 @@ var tid = 0; // unique transition ID
 var highSid = 0; // ID of highlighted state
 var highTid = 0; // ID of highlighted transition
 var startSid = 0; // ID of start state
-var startTid = 0; // ID of start transition (necessary?)
+var startTid = 0; // ID of start transition
 
 class Edge {
 
@@ -42,14 +42,14 @@ class Edge {
             var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
             var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
 
-            var x = -b/(2*a); // x centre
-            var y = -c/(2*a); // y centre
-            var radius = Math.hypot(x-x1, y-y1);
+            this.x = -b/(2*a); // x centre
+            this.y = -c/(2*a); // y centre
+            this.radius = Math.hypot(this.x-x1, this.y-y1);
 
             // Angle between arc centre and end of arc
-            var alpha = Math.atan2(y2-y, x2-x); 
+            var alpha = Math.atan2(y2-this.y, x2-this.x); 
 
-            ctx.arc(x, y, radius, Math.PI-alpha, alpha); // arc is drawn outside of node area
+            ctx.arc(this.x, this.y, this.radius, Math.PI-alpha, alpha); // arc is drawn outside of node area
 
             // Draw chevron at end of arc
             ctx.moveTo(x2, y2);
@@ -64,7 +64,7 @@ class Edge {
                 var fromY = toY;
                 var dx = RADIUS;
                 var dy = 0;
-                var angle = Math.atan2(dy, dx);
+                this.angle = Math.atan2(dy, dx);
             } else { // edge between nodes
                 var toX = this.toNode.x;
                 var toY = this.toNode.y;
@@ -74,13 +74,13 @@ class Edge {
                 // Calculates line angle between centres of each node
                 var dx = toX-fromX;
                 var dy = toY-fromY;
-                var angle = Math.atan2(dy, dx);
+                this.angle = Math.atan2(dy, dx);
 
                 // 'Remove' portion of edge contained within nodes
-                fromX += Math.cos(angle)*RADIUS;
-                fromY += Math.sin(angle)*RADIUS;
-                toX -= Math.cos(angle)*RADIUS;
-                toY -= Math.sin(angle)*RADIUS;
+                fromX += Math.cos(this.angle)*RADIUS;
+                fromY += Math.sin(this.angle)*RADIUS;
+                toX -= Math.cos(this.angle)*RADIUS;
+                toY -= Math.sin(this.angle)*RADIUS;
             }
 
             // Draw connecting line
@@ -88,13 +88,12 @@ class Edge {
             ctx.lineTo(toX, toY);
 
             // Draw chevron at end of edge
-            ctx.lineTo(toX-CHEVRON*Math.cos(angle-Math.PI/6), toY-CHEVRON*Math.sin(angle-Math.PI/6));
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
             ctx.moveTo(toX, toY);
-            ctx.lineTo(toX-CHEVRON*Math.cos(angle+Math.PI/6), toY-CHEVRON*Math.sin(angle+Math.PI/6));
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
         }
         ctx.stroke();
     }
-
 }
 
 class Node {
@@ -130,7 +129,6 @@ class Node {
 
         ctx.strokeStyle = "#000000"; // revert colour to black
     }
-
 }
 
 function getFromId(id, arr) {
@@ -141,9 +139,28 @@ function getFromId(id, arr) {
     }
 }
 
+function edgeUnderMouse(x, y) {
+    for (var i=edges.length-1; i >=0; i--) {
+        var edge = edges[i];
+        if (edge.id != startTid) {
+            if (edge.fromNode == edge.toNode) {
+                var dx = edge.x-x;
+                var dy = edge.y-y;
+                if (dx*dx+dy*dy < edge.radius*edge.radius) {
+                    return i;
+                }
+            } else {
+                // define rectangle surrounding edge
+                // check if mouse lies within rectangle
+                // look at Link.prototype.containsPoint
+            }
+        }
+    }
+}
+
 // Might get this to return the node instead of the ID
 function nodeUnderMouse(x, y) {
-    for (var i=nodes.length-1; i >= 0 ; i--) {
+    for (var i=nodes.length-1; i >= 0; i--) {
         var node = nodes[i];
         var dx = node.x-x;
         var dy = node.y-y;
@@ -228,7 +245,7 @@ canvas.addEventListener("dblclick",
         var stateIndex = nodeUnderMouse(x, y);
 
         // Toggle if node is an accept state
-        if (stateIndex != -1) {
+        if (stateIndex != -1 && !event.shiftKey) {
             nodes[stateIndex].accept = !nodes[stateIndex].accept;
             updateCanvas("down");
         }
