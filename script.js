@@ -9,14 +9,6 @@ var highTid = 0; // ID of highlighted transition
 var startSid = 0; // ID of start state
 var startTid = 0; // ID of start transition (necessary?)
 
-// class Start {
-
-//     constructor(node) {
-
-//     }
-
-// }
-
 class Edge {
 
     constructor(id, fromNode, toNode) {
@@ -45,7 +37,7 @@ class Edge {
             var x3 = xn;
             var y3 = yn-1.7*RADIUS;
 
-            // Find circle equation from above three points
+            // Find circle equation from three points (above)
             var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
             var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
             var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
@@ -160,7 +152,7 @@ function nodeUnderMouse(x, y) {
             return i;
         }
     }
-    return -1
+    return -1 // indicates no node under mouse
 }
 
 function coordinates(event) {
@@ -186,15 +178,12 @@ function updateCanvas(eventType) {
 
         // Draw nodes
         for (var i=0; i<nodes.length; i++) {
-            if (nodes[i].id != startSid) {
-                nodes[i].draw(ctx);
+            nodes[i].draw(ctx);
+            // Draw start edge
+            if (nodes[i].id == startSid) {
+                getFromId(startTid, edges).draw(ctx);
             }
         }
-
-        // Draw start node and start edge last
-        getFromId(startSid, nodes).draw(ctx);
-        getFromId(startTid, edges).draw(ctx);
-        // TODO: messes with node layers anyway...
     }
 }
 
@@ -206,8 +195,6 @@ var fromY = 0;
 
 // way to do it without?
 var state = null;
-
-// TODO: double click to make accept state
 
 window.addEventListener("keydown",
     function(event){
@@ -225,18 +212,26 @@ window.addEventListener("keydown",
                 }
                 break;
 
-            case 'a':
-                // Toggle if node is an accept state
-                if (nodes.length > 0) {
-                    const s = getFromId(highSid, nodes);
-                    s.accept = !s.accept;
-                }
-                break;
-
             // case 'Delete'
         }
 
         updateCanvas("down");
+    }
+);
+
+canvas.addEventListener("dblclick",
+    function(event) {
+
+        var coords = coordinates(event); // get mouse coordinates
+        var x = coords.x;
+        var y = coords.y;
+        var stateIndex = nodeUnderMouse(x, y);
+
+        // Toggle if node is an accept state
+        if (stateIndex != -1) {
+            nodes[stateIndex].accept = !nodes[stateIndex].accept;
+            updateCanvas("down");
+        }
     }
 );
 
@@ -247,40 +242,50 @@ canvas.addEventListener("mousedown",
         var x = coords.x;
         var y = coords.y;
         var stateIndex = nodeUnderMouse(x, y);
+        // var edgeIndex = edgeUnderMouse(x, y); // TODO: Define cases for self-loops and regular transitions
 
-        if (!event.shiftKey) { // shift key not held
-            // Drag node if existing one is selected
-            if (stateIndex != -1) {
-                state = nodes[stateIndex];
-                state.dragging = true;
-                highSid = state.id;
-                canvas.style.cursor = "move";
-            // Create new node if one is not selected
-            } else {
-                var n = new Node(sid, x, y);
-                // Set start edge to point to new node if it's the first to be drawn
-                if (nodes.length == 0){
-                    var e = new Edge(tid, null, n);
-                    edges.push(e);
-                    tid++;
-                }
-                nodes.push(n);
-                highSid = sid;
-                sid++;
-                state = n;
-            }
-
-            updateCanvas("down");
-        } else { // shift key held
-            // Create edge from highlighted node to selected node
-            if (stateIndex != -1) {
+        if (stateIndex != -1) { // state selected
+            if (event.shiftKey) { // shift held
                 // TODO: check if edge already exists between nodes
                 var e = new Edge(tid, getFromId(highSid, nodes), nodes[stateIndex]);
                 edges.push(e);
                 tid++;
-                // highSid = nodes[stateIndex].id; // with or without?
-                updateCanvas("down");
+            //} else if (event.ctrlKey) { // ctrl held
+            } else {
+                state = nodes[stateIndex];
+                state.dragging = true;
+                highSid = state.id;
+                canvas.style.cursor = "move";
             }
+            updateCanvas("down");
+        // } else if (edgeIndex != 1) { // edge selected
+        } else { // empty space on canvas selected
+            if (event.shiftKey) { // shift held
+                var n = new Node(sid, x, y);
+                state = n;
+                nodes.push(n);
+                sid++;
+                if (nodes.length == 1) {
+                    var e = new Edge(tid, null, n);
+                } else {
+                    var e = new Edge(tid, getFromId(highSid, nodes), n);
+                }
+                edges.push(e);
+                tid++;
+            // } else if (event.ctrlKey) { // ctrl held
+            } else {
+                var n = new Node(sid, x, y);
+                state = n;
+                nodes.push(n);
+                highSid = sid;
+                sid++;
+                if (nodes.length == 1) {
+                    var e = new Edge(tid, null, n);
+                    edges.push(e);
+                    tid++;
+                }
+            }
+            updateCanvas("down");
         }
     }
 );
