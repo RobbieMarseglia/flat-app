@@ -1,6 +1,7 @@
 let RADIUS = 40; // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10; // padding either side of transitions for easier selection
+let FONTSIZE = "16px"; // font size for labels
 const nodes = []; // array of states
 const edges = []; // array of transitions
 var sid = 0; // unique state ID
@@ -72,6 +73,17 @@ class Edge {
             ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
             ctx.moveTo(x2, y2);
             ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
+
+            ctx.stroke();
+
+            ctx.strokeStyle = "#000000"; // revert colour to black
+
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.fillText(this.label, x3, y3-4);
+            ctx.stroke();
+
+            ctx.fillStyle = "#fcfcfc"
         } else {
             if (this.fromNode == null) { // start edge
                 var toX = this.toNode.x-RADIUS;
@@ -107,10 +119,28 @@ class Edge {
             ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
             ctx.moveTo(toX, toY);
             ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
-        }
-        ctx.stroke();
+            ctx.stroke();
 
-        ctx.strokeStyle = "#000000"; // revert colour to black
+            ctx.strokeStyle = "#000000"; // revert colour to black
+
+            if (this.fromNode != null) {
+                // var width = ctx.measureText(this.label).width;
+                // var height = ctx.measureText(this.label).height; //undefined
+
+                var x = (this.fromNode.x + this.toNode.x) / 2;
+                var y = (this.fromNode.y + this.toNode.y) / 2;
+
+                // ctx.fillRect(x-width/2, y-height/2, width, height);
+
+                ctx.fillStyle = "#000000";
+
+                ctx.beginPath();
+                ctx.fillText(this.label, x, y);
+                ctx.stroke();
+
+                ctx.fillStyle = "#fcfcfc";
+            }
+        }
     }
 }
 
@@ -147,6 +177,14 @@ class Node {
         }
 
         ctx.strokeStyle = "#000000"; // revert colour to black
+
+        // TODO: add background to text
+        ctx.fillStyle = "#000000";
+        ctx.beginPath();
+        ctx.fillText(this.label, this.x, this.y+5);
+        ctx.stroke();
+
+        ctx.fillStyle = "#fcfcfc";
     }
 }
 
@@ -232,6 +270,8 @@ function updateCanvas(eventType) {
 var canvas = document.getElementById('flat-canvas');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle = "#fcfcfc";
+ctx.textAlign = "center";
+ctx.font = FONTSIZE + " Arial";
 var fromX = 0;
 var fromY = 0;
 
@@ -241,8 +281,21 @@ var state = null;
 window.addEventListener("keydown",
     function(event){
 
-        switch(event.key){
-            
+        var toLabel = null;
+
+        if (highSid != -1) {
+            toLabel = getFromId(highSid, nodes);
+        } else if (highTid != -1) {
+            toLabel = getFromId(highTid, edges);
+        }
+
+        if (toLabel != null && event.key.length == 1) {
+            var unicode = event.key.charCodeAt(0);
+            // if ((unicode > 47 && unicode < 58) || (unicode > 64 && unicode < 91) || (unicode > 96 && unicode < 123) || unicode == 32) {
+                toLabel.label += event.key;
+            // }
+        } else if (event.key == "Backspace") {
+            toLabel.label = toLabel.label.slice(0,-1);
         }
 
         updateCanvas("down");
@@ -323,7 +376,6 @@ canvas.addEventListener("mousedown",
 
         if (stateIndex != -1) { // state selected
             if (event.shiftKey) { // shift held
-                // TODO: check if edge already exists between nodes
                 if (highSid != -1) { // a state is currently highlighted
                     var from = getFromId(highSid, nodes);
                     var create = true;
