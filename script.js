@@ -150,12 +150,18 @@ function edgeUnderMouse(x, y) {
                     return i;
                 }
             } else {
-                // define rectangle surrounding edge
-                // check if mouse lies within rectangle
-                // look at Link.prototype.containsPoint
+                var dx = edge.toNode.x - edge.fromNode.x;
+                var dy = edge.toNode.y - edge.fromNode.y;
+                var len = Math.sqrt(dx*dx+dy*dy);
+                var percent = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
+                var distance = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
+                if (percent > 0 && percent < 1 && Math.abs(distance) < 6) { // hitTargetPadding
+                    return i;
+                }
             }
         }
     }
+    return -1;
 }
 
 // Might get this to return the node instead of the ID
@@ -259,7 +265,7 @@ canvas.addEventListener("mousedown",
         var x = coords.x;
         var y = coords.y;
         var stateIndex = nodeUnderMouse(x, y);
-        // var edgeIndex = edgeUnderMouse(x, y); // TODO: Define cases for self-loops and regular transitions
+        var edgeIndex = edgeUnderMouse(x, y);
 
         if (stateIndex != -1) { // state selected
             if (event.shiftKey) { // shift held
@@ -275,7 +281,8 @@ canvas.addEventListener("mousedown",
                 canvas.style.cursor = "move";
             }
             updateCanvas("down");
-        // } else if (edgeIndex != 1) { // edge selected
+        } else if (edgeIndex != -1) {// edge selected
+            console.log(edgeIndex);
         } else { // empty space on canvas selected
             if (event.shiftKey) { // shift held
                 var n = new Node(sid, x, y);
