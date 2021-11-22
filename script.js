@@ -1,11 +1,12 @@
 let RADIUS = 40; // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
+let SELECTAREA = 10; // padding either side of transitions for easier selection
 const nodes = []; // array of states
 const edges = []; // array of transitions
 var sid = 0; // unique state ID
 var tid = 0; // unique transition ID
 var highSid = 0; // ID of highlighted state
-var highTid = 0; // ID of highlighted transition
+var highTid = -1; // ID of highlighted transition
 var startSid = 0; // ID of start state
 var startTid = 0; // ID of start transition
 
@@ -15,9 +16,24 @@ class Edge {
         this.id = id;
         this.fromNode = fromNode;
         this.toNode = toNode;
+        this.label = "";
+
+        // Set if self loop
+        this.x = null;
+        this.y = null;
+        this.radius = null;
+
+        // Set if non self loop
+        this.angle = null;
     }
 
     draw(ctx) {
+
+        // Colour edge red if highlighted
+        if (this.id == highTid) {
+            ctx.strokeStyle = "#ff0000";
+        }
+
         ctx.beginPath();
 
         if (this.fromNode == this.toNode) { // self loop
@@ -93,6 +109,8 @@ class Edge {
             ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
         }
         ctx.stroke();
+
+        ctx.strokeStyle = "#000000"; // revert colour to black
     }
 }
 
@@ -102,6 +120,7 @@ class Node {
         this.id = id;
         this.x = x;
         this.y = y;
+        this.label = "";
         this.accept = false;
         this.dragging = false;
         this.neighbours = [];
@@ -139,6 +158,7 @@ function getFromId(id, arr) {
     }
 }
 
+
 function edgeUnderMouse(x, y) {
     for (var i=edges.length-1; i >=0; i--) {
         var edge = edges[i];
@@ -146,16 +166,16 @@ function edgeUnderMouse(x, y) {
             if (edge.fromNode == edge.toNode) {
                 var dx = edge.x-x;
                 var dy = edge.y-y;
-                if (dx*dx+dy*dy < edge.radius*edge.radius) {
+                if (dx*dx+dy*dy < (edge.radius+SELECTAREA)*(edge.radius+SELECTAREA)) {
                     return i;
                 }
             } else {
                 var dx = edge.toNode.x - edge.fromNode.x;
                 var dy = edge.toNode.y - edge.fromNode.y;
                 var len = Math.sqrt(dx*dx+dy*dy);
-                var percent = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
-                var distance = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
-                if (percent > 0 && percent < 1 && Math.abs(distance) < 6) { // hitTargetPadding
+                var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
+                var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
+                if (perc > 0 && perc < 1 && Math.abs(dist) < SELECTAREA) {
                     return i;
                 }
             }
@@ -164,7 +184,6 @@ function edgeUnderMouse(x, y) {
     return -1;
 }
 
-// Might get this to return the node instead of the ID
 function nodeUnderMouse(x, y) {
     for (var i=nodes.length-1; i >= 0; i--) {
         var node = nodes[i];
@@ -223,19 +242,7 @@ window.addEventListener("keydown",
     function(event){
 
         switch(event.key){
-
-            case 's':
-                startSid = highSid; // set highlighted state as start state
-                // Set start edge to point at this node
-                for (var i=0; i<edges.length; i++) {
-                    if (edges[i].fromNode == null) {
-                        edges[i].toNode = getFromId(highSid, nodes);
-                        break;
-                    }
-                }
-                break;
-
-            // case 'Delete'
+            
         }
 
         updateCanvas("down");
@@ -249,12 +256,59 @@ canvas.addEventListener("dblclick",
         var x = coords.x;
         var y = coords.y;
         var stateIndex = nodeUnderMouse(x, y);
+        var edgeIndex = edgeUnderMouse(x, y);
 
-        // Toggle if node is an accept state
-        if (stateIndex != -1 && !event.shiftKey) {
+        if (stateIndex != -1) { // node selected
             nodes[stateIndex].accept = !nodes[stateIndex].accept;
-            updateCanvas("down");
+        } else if (edgeIndex == -1) { // empty space on canvas selected
+            if (event.shiftKey) { // shift held
+                if (highSid != -1) {
+                    var n = new Node(sid, x, y);
+                    state = n;
+                    nodes.push(n);
+                    sid++;
+                    if (nodes.length == 1) {
+                        var e = new Edge(tid, null, n);
+                    } else {
+                        var e = new Edge(tid, getFromId(highSid, nodes), n);
+                    }
+                    edges.push(e);
+                    tid++;
+                }
+            } else if (event.ctrlKey) { // ctrl held
+                var n = new Node(sid, x, y);
+                state = n;
+                nodes.push(n);
+                highSid = sid;
+                highTid = -1;
+                sid++;
+                if (nodes.length == 1) {
+                    var e = new Edge(tid, null, n);
+                    edges.push(e);
+                } else {
+                    // Set start edge to point at this node
+                    for (var i=0; i<edges.length; i++) {
+                        if (edges[i].fromNode == null) {
+                            edges[i].toNode = getFromId(highSid, nodes);
+                            break;
+                        }
+                    }
+                }
+            } else {
+                var n = new Node(sid, x, y);
+                state = n;
+                nodes.push(n);
+                highSid = sid;
+                highTid = -1;
+                sid++;
+                if (nodes.length == 1) {
+                    var e = new Edge(tid, null, n);
+                    edges.push(e);
+                    tid++;
+                }
+            }
         }
+        updateCanvas("down");
     }
 );
 
@@ -270,47 +324,46 @@ canvas.addEventListener("mousedown",
         if (stateIndex != -1) { // state selected
             if (event.shiftKey) { // shift held
                 // TODO: check if edge already exists between nodes
-                var e = new Edge(tid, getFromId(highSid, nodes), nodes[stateIndex]);
-                edges.push(e);
-                tid++;
-            //} else if (event.ctrlKey) { // ctrl held
+                if (highSid != -1) { // a state is currently highlighted
+                    var from = getFromId(highSid, nodes);
+                    var create = true;
+                    for (var i=0; i<edges.length; i++) {
+                        if (edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) {
+                            create = false;
+                            break;
+                        }
+                    }
+                    if (create) {
+                        var e = new Edge(tid, getFromId(highSid, nodes), nodes[stateIndex]);
+                        edges.push(e);
+                        tid++;
+                    }
+                }
+            } else if (event.ctrlKey) { // ctrl held
+                state = nodes[stateIndex];
+                highSid = state.id;
+                highTid = -1;
+                startSid = highSid; // set highlighted state as start state
+                // Set start edge to point at this node
+                for (var i=0; i<edges.length; i++) {
+                    if (edges[i].fromNode == null) {
+                        edges[i].toNode = getFromId(highSid, nodes);
+                        break;
+                    }
+                }
             } else {
                 state = nodes[stateIndex];
                 state.dragging = true;
                 highSid = state.id;
+                highTid = -1;
                 canvas.style.cursor = "move";
             }
-            updateCanvas("down");
-        } else if (edgeIndex != -1) {// edge selected
-            console.log(edgeIndex);
-        } else { // empty space on canvas selected
-            if (event.shiftKey) { // shift held
-                var n = new Node(sid, x, y);
-                state = n;
-                nodes.push(n);
-                sid++;
-                if (nodes.length == 1) {
-                    var e = new Edge(tid, null, n);
-                } else {
-                    var e = new Edge(tid, getFromId(highSid, nodes), n);
-                }
-                edges.push(e);
-                tid++;
-            // } else if (event.ctrlKey) { // ctrl held
-            } else {
-                var n = new Node(sid, x, y);
-                state = n;
-                nodes.push(n);
-                highSid = sid;
-                sid++;
-                if (nodes.length == 1) {
-                    var e = new Edge(tid, null, n);
-                    edges.push(e);
-                    tid++;
-                }
-            }
-            updateCanvas("down");
+        } else if (edgeIndex != -1) { // edge selected
+            var edge = edges[edgeIndex];
+            highTid = edge.id;
+            highSid = -1;
         }
+        updateCanvas("down");
     }
 );
 
