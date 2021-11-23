@@ -1,7 +1,7 @@
 let RADIUS = 40; // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10; // padding either side of transitions for easier selection
-let FONTSIZE = "16px"; // font size for labels
+let FONTSIZE = 16; // font size for labels
 const nodes = []; // array of states
 const edges = []; // array of transitions
 var sid = 0; // unique state ID
@@ -124,13 +124,13 @@ class Edge {
             ctx.strokeStyle = "#000000"; // revert colour to black
 
             if (this.fromNode != null) {
-                // var width = ctx.measureText(this.label).width;
+                var width = ctx.measureText(this.label).width;
                 // var height = ctx.measureText(this.label).height; //undefined
 
                 var x = (this.fromNode.x + this.toNode.x) / 2;
                 var y = (this.fromNode.y + this.toNode.y) / 2;
 
-                // ctx.fillRect(x-width/2, y-height/2, width, height);
+                ctx.fillRect(x-width/2, y-FONTSIZE+2, width, FONTSIZE+2);
 
                 ctx.fillStyle = "#000000";
 
@@ -271,7 +271,7 @@ var canvas = document.getElementById('flat-canvas');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle = "#fcfcfc";
 ctx.textAlign = "center";
-ctx.font = FONTSIZE + " Arial";
+ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
 
