@@ -421,28 +421,31 @@ canvas.addEventListener("mousedown",
 
 canvas.addEventListener("mousemove",
     function(event) {
-        var coords = coordinates(event);
+        var coords = coordinates(event); // get mouse coordinates
         var x = coords.x;
         var y = coords.y;
         var stateId = nodeUnderMouse(x,y);
+
+        // Change look of mouse if hovering over state
         if (stateId != -1) {
             canvas.style.cursor = "move";
         } else {
             canvas.style.cursor = "auto";
         }
 
+        // Calculate change in mouse position
         var dx = x-fromX;
         var dy = y-fromY;
         fromX = x;
         fromY = y;
 
-        if (state) {
-            if (state.dragging) {
+        if (state) { // there exists at least one state
+            if (state.dragging) { // the state is being dragged
                 state.x += dx;
                 state.y += dy;
+                updateCanvas("move"); // only update if dragging node
             }
         }
-        updateCanvas("move");
     }
 );
 
