@@ -8,8 +8,8 @@ var sid = 0; // unique state ID
 var tid = 0; // unique transition ID
 var highSid = -1; // ID of highlighted state
 var highTid = -1; // ID of highlighted transition
-var startSid = 0; // ID of start state
-var startTid = 0; // ID of start transition
+var startSid = -1; // ID of start state
+var startTid = -1; // ID of start transition
 
 class Edge {
 
@@ -187,7 +187,6 @@ class Node {
     }
 }
 
-// TODO: May get it to return i instead
 function getFromId(id, arr) {
     for (var i=0; i<arr.length; i++) {
         if (arr[i].id == id) {
@@ -281,14 +280,17 @@ var state = null;
 window.addEventListener("keydown",
     function(event){
 
+        console.log(edges);
+        console.log(nodes);
+
         var addLabel = null;
 
         if (highSid != -1) {
             index = getFromId(highSid, nodes);
-            addLabel = edges[index];
+            addLabel = nodes[index];
         } else if (highTid != -1) {
             index = getFromId(highTid, edges);
-            addLabel = nodes[index];
+            addLabel = edges[index];
         }
 
         if (addLabel != null && event.key.length == 1) {
@@ -300,10 +302,25 @@ window.addEventListener("keydown",
             addLabel.label = addLabel.label.slice(0,-1);
         } else if (event.key == "Delete") {
             if (highSid != -1) {
+                // TODO: Copy array, make edits, then set as new edge array
+                var length = edges.length;
+                for (var i=0; i<length; i++) {
+                    if (edges[i].fromNode == nodes[index] || edges[i].toNode == nodes[index]) {
+                        if (edges[i].id == startTid) {
+                            startTid = -1;
+                        }
+                        edges.splice(i,1);
+                    }
+                }
+                if (nodes[index].id == startSid) {
+                    startSid = -1;
+                }
                 nodes.splice(index,1);
-                console.log(nodes);
                 highSid = -1;
             } else if (highTid != -1) {
+                if (edges[index].id == startTid) {
+                    startTid = -1;
+                }
                 edges.splice(index,1);
                 highTid = -1;
             }
@@ -330,13 +347,13 @@ canvas.addEventListener("dblclick",
                     var n = new Node(sid, x, y);
                     state = n;
                     nodes.push(n);
-                    if (nodes.length == 1) {
-                        var e = new Edge(tid, null, n);
-                        startSid = sid;
-                        startTid = tid;
-                    } else {
+                    // if (nodes.length == 1) {
+                    //     var e = new Edge(tid, null, n);
+                    //     startSid = sid;
+                    //     startTid = tid;
+                    // } else {
                         var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
-                    }
+                    // }
                     sid++;
                     edges.push(e);
                     tid++;
@@ -367,11 +384,11 @@ canvas.addEventListener("dblclick",
                 highSid = sid;
                 highTid = -1;
                 sid++;
-                if (nodes.length == 1) {
-                    var e = new Edge(tid, null, n);
-                    edges.push(e);
-                    tid++;
-                }
+                // if (nodes.length == 1) {
+                //     var e = new Edge(tid, null, n);
+                //     edges.push(e);
+                //     tid++;
+                // }
             }
         }
         updateCanvas("down");
@@ -409,11 +426,19 @@ canvas.addEventListener("mousedown",
                 highSid = state.id;
                 highTid = -1;
                 startSid = highSid; // set highlighted state as start state
-                // Set start edge to point at this node
-                for (var i=0; i<edges.length; i++) {
-                    if (edges[i].fromNode == null) {
-                        edges[i].toNode = nodes[getFromId(highSid, nodes)];
-                        break;
+
+                if (startTid == -1) {
+                    var e = new Edge(tid, null, state);
+                    edges.push(e);
+                    startTid = tid;
+                    tid++;
+                } else {
+                    // Set start edge to point at this node
+                    for (var i=0; i<edges.length; i++) {
+                        if (edges[i].id == startTid) {
+                            edges[i].toNode = nodes[getFromId(highSid, nodes)];
+                            break;
+                        }
                     }
                 }
             } else {
