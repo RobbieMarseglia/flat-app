@@ -6,7 +6,7 @@ const nodes = []; // array of states
 const edges = []; // array of transitions
 var sid = 0; // unique state ID
 var tid = 0; // unique transition ID
-var highSid = 0; // ID of highlighted state
+var highSid = -1; // ID of highlighted state
 var highTid = -1; // ID of highlighted transition
 var startSid = 0; // ID of start state
 var startTid = 0; // ID of start transition
@@ -85,7 +85,7 @@ class Edge {
 
             ctx.fillStyle = "#fcfcfc"
         } else {
-            if (this.fromNode == null) { // start edge
+            if (this.id == startTid) { // start edge
                 var toX = this.toNode.x-RADIUS;
                 var toY = this.toNode.y;
                 var fromX = toX-RADIUS;
@@ -178,7 +178,6 @@ class Node {
 
         ctx.strokeStyle = "#000000"; // revert colour to black
 
-        // TODO: add background to text
         ctx.fillStyle = "#000000";
         ctx.beginPath();
         ctx.fillText(this.label, this.x, this.y+5);
@@ -188,10 +187,11 @@ class Node {
     }
 }
 
+// TODO: May get it to return i instead
 function getFromId(id, arr) {
     for (var i=0; i<arr.length; i++) {
         if (arr[i].id == id) {
-            return arr[i];
+            return i;
         }
     }
 }
@@ -261,7 +261,7 @@ function updateCanvas(eventType) {
             nodes[i].draw(ctx);
             // Draw start edge
             if (nodes[i].id == startSid) {
-                getFromId(startTid, edges).draw(ctx);
+                edges[getFromId(startTid, edges)].draw(ctx);
             }
         }
     }
@@ -281,21 +281,32 @@ var state = null;
 window.addEventListener("keydown",
     function(event){
 
-        var toLabel = null;
+        var addLabel = null;
 
         if (highSid != -1) {
-            toLabel = getFromId(highSid, nodes);
+            index = getFromId(highSid, nodes);
+            addLabel = edges[index];
         } else if (highTid != -1) {
-            toLabel = getFromId(highTid, edges);
+            index = getFromId(highTid, edges);
+            addLabel = nodes[index];
         }
 
-        if (toLabel != null && event.key.length == 1) {
-            var unicode = event.key.charCodeAt(0);
+        if (addLabel != null && event.key.length == 1) {
+            // var unicode = event.key.charCodeAt(0);
             // if ((unicode > 47 && unicode < 58) || (unicode > 64 && unicode < 91) || (unicode > 96 && unicode < 123) || unicode == 32) {
-                toLabel.label += event.key;
+                addLabel.label += event.key;
             // }
         } else if (event.key == "Backspace") {
-            toLabel.label = toLabel.label.slice(0,-1);
+            addLabel.label = addLabel.label.slice(0,-1);
+        } else if (event.key == "Delete") {
+            if (highSid != -1) {
+                nodes.splice(index,1);
+                console.log(nodes);
+                highSid = -1;
+            } else if (highTid != -1) {
+                edges.splice(index,1);
+                highTid = -1;
+            }
         }
 
         updateCanvas("down");
@@ -319,12 +330,14 @@ canvas.addEventListener("dblclick",
                     var n = new Node(sid, x, y);
                     state = n;
                     nodes.push(n);
-                    sid++;
                     if (nodes.length == 1) {
                         var e = new Edge(tid, null, n);
+                        startSid = sid;
+                        startTid = tid;
                     } else {
-                        var e = new Edge(tid, getFromId(highSid, nodes), n);
+                        var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
                     }
+                    sid++;
                     edges.push(e);
                     tid++;
                 }
@@ -342,7 +355,7 @@ canvas.addEventListener("dblclick",
                     // Set start edge to point at this node
                     for (var i=0; i<edges.length; i++) {
                         if (edges[i].fromNode == null) {
-                            edges[i].toNode = getFromId(highSid, nodes);
+                            edges[i].toNode = nodes[getFromId(highSid, nodes)];
                             break;
                         }
                     }
@@ -377,7 +390,7 @@ canvas.addEventListener("mousedown",
         if (stateIndex != -1) { // state selected
             if (event.shiftKey) { // shift held
                 if (highSid != -1) { // a state is currently highlighted
-                    var from = getFromId(highSid, nodes);
+                    var from = nodes[getFromId(highSid, nodes)];
                     var create = true;
                     for (var i=0; i<edges.length; i++) {
                         if (edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) {
@@ -386,7 +399,7 @@ canvas.addEventListener("mousedown",
                         }
                     }
                     if (create) {
-                        var e = new Edge(tid, getFromId(highSid, nodes), nodes[stateIndex]);
+                        var e = new Edge(tid, nodes[getFromId(highSid, nodes)], nodes[stateIndex]);
                         edges.push(e);
                         tid++;
                     }
@@ -399,7 +412,7 @@ canvas.addEventListener("mousedown",
                 // Set start edge to point at this node
                 for (var i=0; i<edges.length; i++) {
                     if (edges[i].fromNode == null) {
-                        edges[i].toNode = getFromId(highSid, nodes);
+                        edges[i].toNode = nodes[getFromId(highSid, nodes)];
                         break;
                     }
                 }
