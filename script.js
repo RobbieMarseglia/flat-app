@@ -3,7 +3,7 @@ let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10; // padding either side of transitions for easier selection
 let FONTSIZE = 16; // font size for labels
 const nodes = []; // array of states
-const edges = []; // array of transitions
+var edges = []; // array of transitions
 var sid = 0; // unique state ID
 var tid = 0; // unique transition ID
 var highSid = -1; // ID of highlighted state
@@ -256,10 +256,10 @@ function updateCanvas(eventType) {
         }
 
         // Draw nodes
-        for (var i=0; i<nodes.length; i++) {
-            nodes[i].draw(ctx);
+        for (var j=0; j<nodes.length; j++) {
+            nodes[j].draw(ctx);
             // Draw start edge
-            if (nodes[i].id == startSid) {
+            if (nodes[j].id == startSid) {
                 edges[getFromId(startTid, edges)].draw(ctx);
             }
         }
@@ -280,9 +280,6 @@ var state = null;
 window.addEventListener("keydown",
     function(event){
 
-        console.log(edges);
-        console.log(nodes);
-
         var addLabel = null;
 
         if (highSid != -1) {
@@ -294,24 +291,22 @@ window.addEventListener("keydown",
         }
 
         if (addLabel != null && event.key.length == 1) {
-            // var unicode = event.key.charCodeAt(0);
-            // if ((unicode > 47 && unicode < 58) || (unicode > 64 && unicode < 91) || (unicode > 96 && unicode < 123) || unicode == 32) {
-                addLabel.label += event.key;
-            // }
+            addLabel.label += event.key;
         } else if (event.key == "Backspace") {
             addLabel.label = addLabel.label.slice(0,-1);
         } else if (event.key == "Delete") {
             if (highSid != -1) {
-                // TODO: Copy array, make edits, then set as new edge array
-                var length = edges.length;
-                for (var i=0; i<length; i++) {
+                var new_edges = [];
+                for (var i=0; i<edges.length; i++) {
                     if (edges[i].fromNode == nodes[index] || edges[i].toNode == nodes[index]) {
                         if (edges[i].id == startTid) {
                             startTid = -1;
                         }
-                        edges.splice(i,1);
+                    } else {
+                        new_edges.push(edges[i]);
                     }
                 }
+                edges = new_edges;
                 if (nodes[index].id == startSid) {
                     startSid = -1;
                 }
@@ -347,13 +342,7 @@ canvas.addEventListener("dblclick",
                     var n = new Node(sid, x, y);
                     state = n;
                     nodes.push(n);
-                    // if (nodes.length == 1) {
-                    //     var e = new Edge(tid, null, n);
-                    //     startSid = sid;
-                    //     startTid = tid;
-                    // } else {
-                        var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
-                    // }
+                    var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
                     sid++;
                     edges.push(e);
                     tid++;
@@ -364,14 +353,17 @@ canvas.addEventListener("dblclick",
                 nodes.push(n);
                 highSid = sid;
                 highTid = -1;
+                startSid = sid;
                 sid++;
-                if (nodes.length == 1) {
+                if (startTid == -1) {
                     var e = new Edge(tid, null, n);
                     edges.push(e);
+                    startTid = tid;
+                    tid++;
                 } else {
                     // Set start edge to point at this node
                     for (var i=0; i<edges.length; i++) {
-                        if (edges[i].fromNode == null) {
+                        if (edges[i].id == startTid) {
                             edges[i].toNode = nodes[getFromId(highSid, nodes)];
                             break;
                         }
@@ -384,11 +376,6 @@ canvas.addEventListener("dblclick",
                 highSid = sid;
                 highTid = -1;
                 sid++;
-                // if (nodes.length == 1) {
-                //     var e = new Edge(tid, null, n);
-                //     edges.push(e);
-                //     tid++;
-                // }
             }
         }
         updateCanvas("down");
