@@ -1,15 +1,15 @@
-let RADIUS = 40; // state radius
+let RADIUS = 40;        // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
-let SELECTAREA = 10; // padding either side of transitions for easier selection
-let FONTSIZE = 16; // font size for labels
-const nodes = []; // array of states
-var edges = []; // array of transitions
-var sid = 0; // unique state ID
-var tid = 0; // unique transition ID
-var highSid = -1; // ID of highlighted state
-var highTid = -1; // ID of highlighted transition
-var startSid = -1; // ID of start state
-var startTid = -1; // ID of start transition
+let SELECTAREA = 10;    // padding either side of transitions for easier selection
+let FONTSIZE = 16;      // font size for labels
+const nodes = [];       // array of states
+var edges = [];         // array of transitions
+var sid = 0;            // unique state ID
+var tid = 0;            // unique transition ID
+var highSid = -1;       // ID of highlighted state
+var highTid = -1;       // ID of highlighted transition
+var startSid = -1;      // ID of start state
+var startTid = -1;      // ID of start transition
 
 class Edge {
 
@@ -79,6 +79,17 @@ class Edge {
             ctx.strokeStyle = "#000000"; // revert colour to black
 
             ctx.fillStyle = "#000000";
+
+            // var text = "";
+            // for (var i=0; i<this.label.length; i++) {
+            //     if (i+1 < this.label.length && this.label[i] == '\\' && this.label[i+1] == 'e') {
+            //         text += String.fromCharCode(949);
+            //         i++;
+            //     } else {
+            //         text += this.label[i];
+            //     }
+            // }
+
             ctx.beginPath();
             ctx.fillText(this.label, x3, y3-4);
             ctx.stroke();
@@ -125,7 +136,6 @@ class Edge {
 
             if (this.fromNode != null) {
                 var width = ctx.measureText(this.label).width;
-                // var height = ctx.measureText(this.label).height; //undefined
 
                 var x = (this.fromNode.x + this.toNode.x) / 2;
                 var y = (this.fromNode.y + this.toNode.y) / 2;
@@ -291,7 +301,12 @@ window.addEventListener("keydown",
         }
 
         if (addLabel != null && event.key.length == 1) {
-            addLabel.label += event.key;
+            var length = addLabel.label.length;
+            if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
+                addLabel.label = addLabel.label.slice(0,-1) + String.fromCharCode(949);
+            } else {
+                addLabel.label += event.key;
+            }
         } else if (event.key == "Backspace") {
             addLabel.label = addLabel.label.slice(0,-1);
         } else if (event.key == "Delete") {
