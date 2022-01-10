@@ -26,6 +26,9 @@ class Edge {
 
         // Set if non self loop
         this.angle = null;
+
+        // Set if curved
+        this.curved = false;
     }
 
     draw(ctx) {
@@ -262,6 +265,7 @@ function updateCanvas(eventType) {
         for (var i=0; i<edges.length; i++) {
             if (edges[i].id != startTid) {
                 edges[i].draw(ctx);
+                console.log(edges[i].id, edges[i].curved);
             }
         }
 
@@ -330,6 +334,12 @@ window.addEventListener("keydown",
             } else if (highTid != -1) {
                 if (edges[index].id == startTid) {
                     startTid = -1;
+                }
+                for (var i=0; i<edges.length; i++) {
+                    if (edges[i].fromNode == edges[index].toNode && edges[i].toNode == edges[index].fromNode) {
+                        edges[i].curved = false;
+                        break;
+                    }
                 }
                 edges.splice(index,1);
                 highTid = -1;
@@ -411,16 +421,21 @@ canvas.addEventListener("mousedown",
                 if (highSid != -1) { // a state is currently highlighted
                     var from = nodes[getFromId(highSid, nodes)];
                     var create = true;
+                    var curve = false;
                     for (var i=0; i<edges.length; i++) {
-                        if (edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) {
+                        if (create && edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) { // if edge already exists
                             create = false;
-                            break;
+                        }
+                        if (!curve && edges[i].fromNode == nodes[stateIndex] && edges[i].toNode == from) { // if reversed edge exists
+                            curve = true;
+                            edges[i].curved = true;
                         }
                     }
                     if (create) {
                         var e = new Edge(tid, nodes[getFromId(highSid, nodes)], nodes[stateIndex]);
                         edges.push(e);
                         tid++;
+                        e.curved = curve;
                     }
                 }
             } else if (event.ctrlKey) { // ctrl held
