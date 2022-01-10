@@ -1,15 +1,15 @@
-let RADIUS = 40; // state radius
+let RADIUS = 40;        // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
-let SELECTAREA = 10; // padding either side of transitions for easier selection
-let FONTSIZE = 16; // font size for labels
-const nodes = []; // array of states
-const edges = []; // array of transitions
-var sid = 0; // unique state ID
-var tid = 0; // unique transition ID
-var highSid = 0; // ID of highlighted state
-var highTid = -1; // ID of highlighted transition
-var startSid = 0; // ID of start state
-var startTid = 0; // ID of start transition
+let SELECTAREA = 10;    // padding either side of transitions for easier selection
+let FONTSIZE = 16;      // font size for labels
+const nodes = [];       // array of states
+var edges = [];         // array of transitions
+var sid = 0;            // unique state ID
+var tid = 0;            // unique transition ID
+var highSid = -1;       // ID of highlighted state
+var highTid = -1;       // ID of highlighted transition
+var startSid = -1;      // ID of start state
+var startTid = -1;      // ID of start transition
 
 class Edge {
 
@@ -79,13 +79,24 @@ class Edge {
             ctx.strokeStyle = "#000000"; // revert colour to black
 
             ctx.fillStyle = "#000000";
+
+            // var text = "";
+            // for (var i=0; i<this.label.length; i++) {
+            //     if (i+1 < this.label.length && this.label[i] == '\\' && this.label[i+1] == 'e') {
+            //         text += String.fromCharCode(949);
+            //         i++;
+            //     } else {
+            //         text += this.label[i];
+            //     }
+            // }
+
             ctx.beginPath();
             ctx.fillText(this.label, x3, y3-4);
             ctx.stroke();
 
             ctx.fillStyle = "#fcfcfc"
         } else {
-            if (this.fromNode == null) { // start edge
+            if (this.id == startTid) { // start edge
                 var toX = this.toNode.x-RADIUS;
                 var toY = this.toNode.y;
                 var fromX = toX-RADIUS;
@@ -125,7 +136,6 @@ class Edge {
 
             if (this.fromNode != null) {
                 var width = ctx.measureText(this.label).width;
-                // var height = ctx.measureText(this.label).height; //undefined
 
                 var x = (this.fromNode.x + this.toNode.x) / 2;
                 var y = (this.fromNode.y + this.toNode.y) / 2;
@@ -178,7 +188,6 @@ class Node {
 
         ctx.strokeStyle = "#000000"; // revert colour to black
 
-        // TODO: add background to text
         ctx.fillStyle = "#000000";
         ctx.beginPath();
         ctx.fillText(this.label, this.x, this.y+5);
@@ -191,7 +200,7 @@ class Node {
 function getFromId(id, arr) {
     for (var i=0; i<arr.length; i++) {
         if (arr[i].id == id) {
-            return arr[i];
+            return i;
         }
     }
 }
@@ -257,11 +266,11 @@ function updateCanvas(eventType) {
         }
 
         // Draw nodes
-        for (var i=0; i<nodes.length; i++) {
-            nodes[i].draw(ctx);
+        for (var j=0; j<nodes.length; j++) {
+            nodes[j].draw(ctx);
             // Draw start edge
-            if (nodes[i].id == startSid) {
-                getFromId(startTid, edges).draw(ctx);
+            if (nodes[j].id == startSid) {
+                edges[getFromId(startTid, edges)].draw(ctx);
             }
         }
     }
@@ -281,21 +290,50 @@ var state = null;
 window.addEventListener("keydown",
     function(event){
 
-        var toLabel = null;
+        var addLabel = null;
 
         if (highSid != -1) {
-            toLabel = getFromId(highSid, nodes);
+            index = getFromId(highSid, nodes);
+            addLabel = nodes[index];
         } else if (highTid != -1) {
-            toLabel = getFromId(highTid, edges);
+            index = getFromId(highTid, edges);
+            addLabel = edges[index];
         }
 
-        if (toLabel != null && event.key.length == 1) {
-            var unicode = event.key.charCodeAt(0);
-            // if ((unicode > 47 && unicode < 58) || (unicode > 64 && unicode < 91) || (unicode > 96 && unicode < 123) || unicode == 32) {
-                toLabel.label += event.key;
-            // }
+        if (addLabel != null && event.key.length == 1) {
+            var length = addLabel.label.length;
+            if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
+                addLabel.label = addLabel.label.slice(0,-1) + String.fromCharCode(949);
+            } else {
+                addLabel.label += event.key;
+            }
         } else if (event.key == "Backspace") {
-            toLabel.label = toLabel.label.slice(0,-1);
+            addLabel.label = addLabel.label.slice(0,-1);
+        } else if (event.key == "Delete") {
+            if (highSid != -1) {
+                var new_edges = [];
+                for (var i=0; i<edges.length; i++) {
+                    if (edges[i].fromNode == nodes[index] || edges[i].toNode == nodes[index]) {
+                        if (edges[i].id == startTid) {
+                            startTid = -1;
+                        }
+                    } else {
+                        new_edges.push(edges[i]);
+                    }
+                }
+                edges = new_edges;
+                if (nodes[index].id == startSid) {
+                    startSid = -1;
+                }
+                nodes.splice(index,1);
+                highSid = -1;
+            } else if (highTid != -1) {
+                if (edges[index].id == startTid) {
+                    startTid = -1;
+                }
+                edges.splice(index,1);
+                highTid = -1;
+            }
         }
 
         updateCanvas("down");
@@ -319,12 +357,8 @@ canvas.addEventListener("dblclick",
                     var n = new Node(sid, x, y);
                     state = n;
                     nodes.push(n);
+                    var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
                     sid++;
-                    if (nodes.length == 1) {
-                        var e = new Edge(tid, null, n);
-                    } else {
-                        var e = new Edge(tid, getFromId(highSid, nodes), n);
-                    }
                     edges.push(e);
                     tid++;
                 }
@@ -334,15 +368,18 @@ canvas.addEventListener("dblclick",
                 nodes.push(n);
                 highSid = sid;
                 highTid = -1;
+                startSid = sid;
                 sid++;
-                if (nodes.length == 1) {
+                if (startTid == -1) {
                     var e = new Edge(tid, null, n);
                     edges.push(e);
+                    startTid = tid;
+                    tid++;
                 } else {
                     // Set start edge to point at this node
                     for (var i=0; i<edges.length; i++) {
-                        if (edges[i].fromNode == null) {
-                            edges[i].toNode = getFromId(highSid, nodes);
+                        if (edges[i].id == startTid) {
+                            edges[i].toNode = nodes[getFromId(highSid, nodes)];
                             break;
                         }
                     }
@@ -354,11 +391,6 @@ canvas.addEventListener("dblclick",
                 highSid = sid;
                 highTid = -1;
                 sid++;
-                if (nodes.length == 1) {
-                    var e = new Edge(tid, null, n);
-                    edges.push(e);
-                    tid++;
-                }
             }
         }
         updateCanvas("down");
@@ -377,7 +409,7 @@ canvas.addEventListener("mousedown",
         if (stateIndex != -1) { // state selected
             if (event.shiftKey) { // shift held
                 if (highSid != -1) { // a state is currently highlighted
-                    var from = getFromId(highSid, nodes);
+                    var from = nodes[getFromId(highSid, nodes)];
                     var create = true;
                     for (var i=0; i<edges.length; i++) {
                         if (edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) {
@@ -386,7 +418,7 @@ canvas.addEventListener("mousedown",
                         }
                     }
                     if (create) {
-                        var e = new Edge(tid, getFromId(highSid, nodes), nodes[stateIndex]);
+                        var e = new Edge(tid, nodes[getFromId(highSid, nodes)], nodes[stateIndex]);
                         edges.push(e);
                         tid++;
                     }
@@ -396,11 +428,19 @@ canvas.addEventListener("mousedown",
                 highSid = state.id;
                 highTid = -1;
                 startSid = highSid; // set highlighted state as start state
-                // Set start edge to point at this node
-                for (var i=0; i<edges.length; i++) {
-                    if (edges[i].fromNode == null) {
-                        edges[i].toNode = getFromId(highSid, nodes);
-                        break;
+
+                if (startTid == -1) {
+                    var e = new Edge(tid, null, state);
+                    edges.push(e);
+                    startTid = tid;
+                    tid++;
+                } else {
+                    // Set start edge to point at this node
+                    for (var i=0; i<edges.length; i++) {
+                        if (edges[i].id == startTid) {
+                            edges[i].toNode = nodes[getFromId(highSid, nodes)];
+                            break;
+                        }
                     }
                 }
             } else {
