@@ -98,6 +98,37 @@ class Edge {
             ctx.stroke();
 
             ctx.fillStyle = "#fcfcfc"
+        } else if (this.curved) { // curved edge between nodes
+            // set third point to the right of the midpoint between nodes w.r.t. anticlockwise direction
+            // maybe this should be determined by SELECTAREA
+            var x1 = this.fromNode.x;
+            var y1 = this.fromNode.y;
+
+            var x2 = this.toNode.x;
+            var y2 = this.toNode.y;
+
+            var dx = x1-x2;
+            var dy = y1-y2;
+            this.angle = Math.atan2(dy, dx);
+
+            var len = Math.sqrt(dx*dx + dy*dy);
+
+            var x3 = 0.5*(x1+x2) + 2*SELECTAREA*Math.cos(Math.PI/2 - this.angle);
+            var y3 = 0.5*(y1+y2) + 2*SELECTAREA*Math.sin(Math.PI/2 - this.angle); // fix
+
+            // create circle using three points
+            ctx.beginPath();
+            ctx.arc(x3, y3, 2, 0, 2*Math.PI);
+            // ctx.arc(x1+len*0.5,y2+len*0.5, 30, 0, 2*Math.PI);
+            ctx.stroke();
+
+            // only draw section between nodes
+
+            // dynamically draw chevron
+
+            // draw the label at the third point that was created
+
+            // see what code can be placed in a function and what can be reused
         } else {
             if (this.id == startTid) { // start edge
                 var toX = this.toNode.x-RADIUS;
@@ -220,6 +251,9 @@ function edgeUnderMouse(x, y) {
                     return i;
                 }
             } else {
+                // if edge is curved, figure out how to set different select area
+                // i think i need to add to edge.from/toNode.x/y the x-/y-component of the third point of the edge
+                // this might hopefully shift the select window over accordingly
                 var dx = edge.toNode.x - edge.fromNode.x;
                 var dy = edge.toNode.y - edge.fromNode.y;
                 var len = Math.sqrt(dx*dx+dy*dy);
@@ -265,7 +299,6 @@ function updateCanvas(eventType) {
         for (var i=0; i<edges.length; i++) {
             if (edges[i].id != startTid) {
                 edges[i].draw(ctx);
-                console.log(edges[i].id, edges[i].curved);
             }
         }
 
