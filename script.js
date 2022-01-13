@@ -111,10 +111,8 @@ class Edge {
             var dy = y1-y2;
             this.angle = Math.atan2(dy, dx);
 
-            var len = Math.sqrt(dx*dx + dy*dy);
-
-            var x3 = 0.5*(x1+x2) + 2*SELECTAREA*Math.cos(Math.PI/2 - this.angle);
-            var y3 = 0.5*(y1+y2) + 2*SELECTAREA*Math.sin(Math.PI/2 - this.angle); // fix
+            var x3 = 0.5*(x1+x2) - 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
+            var y3 = 0.5*(y1+y2) - 2*SELECTAREA*Math.sin(this.angle - Math.PI/2);
 
             // create circle using three points
             ctx.beginPath();
