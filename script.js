@@ -58,13 +58,11 @@ class Edge {
             var y3 = yn-1.7*RADIUS;
 
             // Find circle equation from three points (above)
-            var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
-            var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
-            var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
+            var circle = circleFromPoints(x1, y1, x2, y2, x3, y3);
 
-            this.x = -b/(2*a); // x centre
-            this.y = -c/(2*a); // y centre
-            this.radius = Math.hypot(this.x-x1, this.y-y1);
+            this.x = circle.x; // x centre
+            this.y = circle.y // y centre
+            this.radius = circle.radius;
 
             // Angle between arc centre and end of arc
             var alpha = Math.atan2(y2-this.y, x2-this.x); 
@@ -83,24 +81,12 @@ class Edge {
 
             ctx.fillStyle = "#000000";
 
-            // var text = "";
-            // for (var i=0; i<this.label.length; i++) {
-            //     if (i+1 < this.label.length && this.label[i] == '\\' && this.label[i+1] == 'e') {
-            //         text += String.fromCharCode(949);
-            //         i++;
-            //     } else {
-            //         text += this.label[i];
-            //     }
-            // }
-
             ctx.beginPath();
             ctx.fillText(this.label, x3, y3-4);
             ctx.stroke();
 
             ctx.fillStyle = "#fcfcfc"
         } else if (this.curved) { // curved edge between nodes
-            // set third point to the right of the midpoint between nodes w.r.t. anticlockwise direction
-            // maybe this should be determined by SELECTAREA
             var x1 = this.fromNode.x;
             var y1 = this.fromNode.y;
 
@@ -109,20 +95,29 @@ class Edge {
 
             var dx = x1-x2;
             var dy = y1-y2;
+            var len = Math.sqrt(dx*dx+dy*dy);
             this.angle = Math.atan2(dy, dx);
 
             var x3 = 0.5*(x1+x2) - 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
             var y3 = 0.5*(y1+y2) - 2*SELECTAREA*Math.sin(this.angle - Math.PI/2);
 
             // create circle using three points
-            ctx.beginPath();
-            ctx.arc(x3, y3, 2, 0, 2*Math.PI);
-            // ctx.arc(x1+len*0.5,y2+len*0.5, 30, 0, 2*Math.PI);
-            ctx.stroke();
+            var circle = circleFromPoints(x1, y1, x2, y2, x3, y3);
+
+            var xc = circle.x;
+            var yc = circle.y;
 
             // only draw section between nodes
 
+            var startAngle = Math.atan2(y1-yc, x1-xc);
+            var endAngle = Math.atan2(y2-yc, x2-xc);
+
+            ctx.beginPath();
+            ctx.arc(circle.x, circle.y, circle.radius, startAngle, endAngle);
+            ctx.stroke();
+
             // dynamically draw chevron
+            // maybe I can use start and end angles to get intersection with circle
 
             // draw the label at the third point that was created
 
@@ -227,6 +222,22 @@ class Node {
 
         ctx.fillStyle = "#fcfcfc";
     }
+}
+
+function circleFromPoints(x1, y1, x2, y2, x3, y3) {
+    // Find circle equation from three points (above)
+    var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
+    var b = (x1**2+y1**2)*(y3-y2)+(x2**2+y2**2)*(y1-y3)+(x3**2+y3**2)*(y2-y1);
+    var c = (x1**2+y1**2)*(x2-x3)+(x2**2+y2**2)*(x3-x1)+(x3**2+y3**2)*(x1-x2);
+
+    var x = -b/(2*a); // x centre
+    var y = -c/(2*a); // y centre
+
+    return {
+        'x' : x,
+        'y' : y,
+        'radius' : Math.hypot(x-x1, y-y1)
+    };
 }
 
 function getFromId(id, arr) {
