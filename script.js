@@ -33,9 +33,13 @@ class Edge {
 
     draw(ctx) {
 
+        ctx.strokeStyle = "#000000";
+        ctx.fillStyle = "#000000";
+
         // Colour edge red if highlighted
         if (this.id == highTid) {
             ctx.strokeStyle = "#ff0000";
+            ctx.fillStyle = "#ff0000";
         }
 
         ctx.beginPath();
@@ -68,17 +72,18 @@ class Edge {
             var alpha = Math.atan2(y2-this.y, x2-this.x); 
 
             ctx.arc(this.x, this.y, this.radius, Math.PI-alpha, alpha); // arc is drawn outside of node area
-
-            // Draw chevron at end of arc
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
-
             ctx.stroke();
 
-            ctx.strokeStyle = "#000000"; // revert colour to black
+            // Draw chevron at end of arc
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
+            ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
 
+            ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#000000";
 
             ctx.beginPath();
@@ -95,7 +100,7 @@ class Edge {
 
             var dx = x1-x2;
             var dy = y1-y2;
-            var len = Math.sqrt(dx*dx+dy*dy);
+            // var len = Math.sqrt(dx*dx+dy*dy);
             this.angle = Math.atan2(dy, dx);
 
             var x3 = 0.5*(x1+x2) - 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
@@ -108,20 +113,49 @@ class Edge {
             var yc = circle.y;
 
             // only draw section between nodes
-
             var startAngle = Math.atan2(y1-yc, x1-xc);
             var endAngle = Math.atan2(y2-yc, x2-xc);
 
             ctx.beginPath();
-            ctx.arc(circle.x, circle.y, circle.radius, startAngle, endAngle);
+            ctx.arc(xc, yc, circle.radius, startAngle, endAngle);
             ctx.stroke();
 
+            // get coords of arc intersection with 'to' node
+            var alpha = Math.atan((2*circle.radius)/RADIUS) - startAngle - Math.PI;
+
+            var xi = x2 + RADIUS*Math.cos(alpha);
+            var yi = y2 - RADIUS*Math.sin(alpha);
+
+            ctx.beginPath();
+            ctx.arc(xi,yi,20,0,2*Math.PI);
+            ctx.stroke();
+            
             // dynamically draw chevron
-            // maybe I can use start and end angles to get intersection with circle
+            // ctx.beginPath();
+            // ctx.moveTo(xi, yi);
+            // ctx.lineTo(xi-CHEVRON*Math.cos(this.angle-Math.PI/5), yi-CHEVRON*Math.sin(this.angle-Math.PI/5));
+            // ctx.lineTo(xi-CHEVRON*Math.cos(this.angle+Math.PI/5), yi-CHEVRON*Math.sin(this.angle+Math.PI/5));
+            // ctx.closePath();
+            // ctx.stroke();
+            // ctx.fill();
+
+            ctx.strokeStyle = "#000000"; // revert colour to black
+            ctx.fillStyle = "#000000";
 
             // draw the label at the third point that was created
+            ctx.fillStyle = "#fcfcfc";
+                
+            var width = ctx.measureText(this.label).width;
 
-            // see what code can be placed in a function and what can be reused
+            ctx.fillRect(x3-width/2, y3-FONTSIZE+2, width, FONTSIZE+2);
+
+            ctx.fillStyle = "#000000";
+
+            ctx.beginPath();
+            ctx.fillText(this.label, x3, y3);
+            ctx.stroke();
+
+            ctx.fillStyle = "#fcfcfc";
         } else {
             if (this.id == startTid) { // start edge
                 var toX = this.toNode.x-RADIUS;
@@ -150,18 +184,25 @@ class Edge {
             }
 
             // Draw connecting line
+            ctx.beginPath();
             ctx.moveTo(fromX, fromY);
             ctx.lineTo(toX, toY);
-
-            // Draw chevron at end of edge
-            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
-            ctx.moveTo(toX, toY);
-            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
             ctx.stroke();
 
+            // Draw chevron at end of edge
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
+
             ctx.strokeStyle = "#000000"; // revert colour to black
+            ctx.fillStyle = "#fcfcfc";
 
             if (this.fromNode != null) {
+
                 var width = ctx.measureText(this.label).width;
 
                 var x = (this.fromNode.x + this.toNode.x) / 2;
