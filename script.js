@@ -45,9 +45,9 @@ class Edge {
         ctx.beginPath();
 
         if (this.fromNode == this.toNode) { // self loop
-            var angle = 5*Math.PI/16;
-            var dx = Math.cos(angle)*RADIUS;
-            var dy = Math.sin(angle)*RADIUS;
+            this.angle = 5*Math.PI/16;
+            var dx = Math.cos(this.angle)*RADIUS;
+            var dy = Math.sin(this.angle)*RADIUS;
             var xn = this.fromNode.x;
             var yn = this.fromNode.y;
 
@@ -57,7 +57,7 @@ class Edge {
             // End of arc
             var x2 = xn+dx;
             var y2 = yn-dy;
-            // Highest point of arc
+            // Arc turning point
             var x3 = xn;
             var y3 = yn-1.7*RADIUS;
 
@@ -71,17 +71,19 @@ class Edge {
             // Angle between arc centre and end of arc
             var alpha = Math.atan2(y2-this.y, x2-this.x); 
 
+            ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, Math.PI-alpha, alpha); // arc is drawn outside of node area
             ctx.stroke();
 
             // Draw chevron at end of arc
-            ctx.beginPath();
-            ctx.moveTo(x2, y2);
-            ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
-            ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
-            ctx.closePath();
-            ctx.stroke();
-            ctx.fill();
+            drawChevron(x2, y2, this.angle, Math.PI/10);
+            // ctx.beginPath();
+            // ctx.moveTo(x2, y2);
+            // ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
+            // ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
+            // ctx.closePath();
+            // ctx.stroke();
+            // ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#000000";
@@ -125,12 +127,9 @@ class Edge {
 
             var xi = x2 + RADIUS*Math.cos(alpha);
             var yi = y2 - RADIUS*Math.sin(alpha);
-
-            // ctx.beginPath();
-            // ctx.arc(xi,yi,20,0,2*Math.PI);
-            // ctx.stroke();
             
             // dynamically draw chevron
+            // drawChevron(xi, yi, this.angle, Math.PI/5);
             ctx.beginPath();
             ctx.moveTo(xi, yi);
             ctx.lineTo(xi+CHEVRON*Math.cos(this.angle-Math.PI/5), yi+CHEVRON*Math.sin(this.angle-Math.PI/5));
@@ -190,13 +189,14 @@ class Edge {
             ctx.stroke();
 
             // Draw chevron at end of edge
-            ctx.beginPath();
-            ctx.moveTo(toX, toY);
-            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
-            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
-            ctx.closePath();
-            ctx.stroke();
-            ctx.fill();
+            drawChevron(toX, toY, this.angle, Math.PI/6);
+            // ctx.beginPath();
+            // ctx.moveTo(toX, toY);
+            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
+            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
+            // ctx.closePath();
+            // ctx.stroke();
+            // ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#fcfcfc";
@@ -265,6 +265,16 @@ class Node {
     }
 }
 
+function drawChevron(x, y, angleEdge, angleHead) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x-CHEVRON*Math.cos(angleEdge - angleHead), y-CHEVRON*Math.sin(angleEdge - angleHead));
+    ctx.lineTo(x-CHEVRON*Math.cos(angleEdge + angleHead), y-CHEVRON*Math.sin(angleEdge + angleHead));
+    ctx.closePath();
+    ctx.stroke();
+    ctx.fill();
+}
+
 function circleFromPoints(x1, y1, x2, y2, x3, y3) {
     // Find circle equation from three points (above)
     var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
@@ -300,15 +310,12 @@ function edgeUnderMouse(x, y) {
                     return i;
                 }
             } else {
-                // if edge is curved, figure out how to set different select area
-                // i think i need to add to edge.from/toNode.x/y the x-/y-component of the third point of the edge
-                // this might hopefully shift the select window over accordingly
                 var dx = edge.toNode.x - edge.fromNode.x;
                 var dy = edge.toNode.y - edge.fromNode.y;
                 var len = Math.sqrt(dx*dx+dy*dy);
                 if (edge.curved) {
-                    var perc = (dx*(x-edge.fromNode.x+1.7*SELECTAREA*Math.cos(edge.angle))+dy*(y-edge.fromNode.y+1.7*SELECTAREA*Math.sin(edge.angle)))/(len*len);
-                    var dist = (dx*(y-edge.fromNode.y+1.7*SELECTAREA*Math.cos(edge.angle))-dy*(x-edge.fromNode.x+1.7*SELECTAREA*Math.sin(edge.angle)))/len;
+                    var perc = (dx*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle))+dy*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle)))/(len*len);
+                    var dist = (dx*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle))-dy*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle)))/len;
                 } else {
                     var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
                     var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
