@@ -103,8 +103,8 @@ class Edge {
             // var len = Math.sqrt(dx*dx+dy*dy);
             this.angle = Math.atan2(dy, dx);
 
-            var x3 = 0.5*(x1+x2) - 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
-            var y3 = 0.5*(y1+y2) - 2*SELECTAREA*Math.sin(this.angle - Math.PI/2);
+            var x3 = 0.5*(x1+x2) + 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
+            var y3 = 0.5*(y1+y2) + 2*SELECTAREA*Math.sin(this.angle - Math.PI/2);
 
             // create circle using three points
             var circle = circleFromPoints(x1, y1, x2, y2, x3, y3);
@@ -113,31 +113,31 @@ class Edge {
             var yc = circle.y;
 
             // only draw section between nodes
-            var startAngle = Math.atan2(y1-yc, x1-xc);
-            var endAngle = Math.atan2(y2-yc, x2-xc);
+            var startAngle = Math.atan2(y2-yc, x2-xc);
+            var endAngle = Math.atan2(y1-yc, x1-xc);
 
             ctx.beginPath();
             ctx.arc(xc, yc, circle.radius, startAngle, endAngle);
             ctx.stroke();
 
             // get coords of arc intersection with 'to' node
-            var alpha = Math.atan((2*circle.radius)/RADIUS) - startAngle - Math.PI;
+            var alpha = Math.acos(RADIUS/(2*circle.radius)) - startAngle + Math.PI;
 
             var xi = x2 + RADIUS*Math.cos(alpha);
             var yi = y2 - RADIUS*Math.sin(alpha);
 
-            ctx.beginPath();
-            ctx.arc(xi,yi,20,0,2*Math.PI);
-            ctx.stroke();
+            // ctx.beginPath();
+            // ctx.arc(xi,yi,20,0,2*Math.PI);
+            // ctx.stroke();
             
             // dynamically draw chevron
-            // ctx.beginPath();
-            // ctx.moveTo(xi, yi);
-            // ctx.lineTo(xi-CHEVRON*Math.cos(this.angle-Math.PI/5), yi-CHEVRON*Math.sin(this.angle-Math.PI/5));
-            // ctx.lineTo(xi-CHEVRON*Math.cos(this.angle+Math.PI/5), yi-CHEVRON*Math.sin(this.angle+Math.PI/5));
-            // ctx.closePath();
-            // ctx.stroke();
-            // ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(xi, yi);
+            ctx.lineTo(xi+CHEVRON*Math.cos(this.angle-Math.PI/5), yi+CHEVRON*Math.sin(this.angle-Math.PI/5));
+            ctx.lineTo(xi+CHEVRON*Math.cos(this.angle+Math.PI/5), yi+CHEVRON*Math.sin(this.angle+Math.PI/5));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#000000";
