@@ -289,7 +289,6 @@ function getFromId(id, arr) {
     }
 }
 
-
 function edgeUnderMouse(x, y) {
     for (var i=edges.length-1; i >=0; i--) {
         var edge = edges[i];
@@ -307,8 +306,13 @@ function edgeUnderMouse(x, y) {
                 var dx = edge.toNode.x - edge.fromNode.x;
                 var dy = edge.toNode.y - edge.fromNode.y;
                 var len = Math.sqrt(dx*dx+dy*dy);
-                var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
-                var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
+                if (edge.curved) {
+                    var perc = (dx*(x-edge.fromNode.x+1.7*SELECTAREA*Math.cos(edge.angle))+dy*(y-edge.fromNode.y+1.7*SELECTAREA*Math.sin(edge.angle)))/(len*len);
+                    var dist = (dx*(y-edge.fromNode.y+1.7*SELECTAREA*Math.cos(edge.angle))-dy*(x-edge.fromNode.x+1.7*SELECTAREA*Math.sin(edge.angle)))/len;
+                } else {
+                    var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
+                    var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
+                }
                 if (perc > 0 && perc < 1 && Math.abs(dist) < SELECTAREA) {
                     return i;
                 }
