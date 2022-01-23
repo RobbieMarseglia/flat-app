@@ -11,6 +11,49 @@ var highTid = -1;       // ID of highlighted transition
 var startSid = -1;      // ID of start state
 var startTid = -1;      // ID of start transition
 
+class Regex {
+
+    constructor(n, sigma, probOr, probKleene, probEmpty) {
+        this.regex = this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+    }
+
+    #kleene(n, sigma, probOr, probKleene, probEmpty) {
+        var expr = this.#expression(n, sigma, probOr, probKleene, probEmpty);
+        if (Math.random() <= probKleene) {
+            if (expr.length > 1) {
+                expr = "(" + expr + ")*";
+            } else {
+                expr = expr + "*";
+            }
+        }
+        return expr;
+    }
+
+    #expression(n, sigma, probOr, probKleene, probEmpty) {
+        // if (n == 0) {
+        //     return String.fromCharCode(949);
+        // } else if (n == 1) {
+        if (n < 2) {
+            return sigma[Math.floor(Math.random() * sigma.length)];
+        } else if (Math.random() <= probEmpty) {
+            return String.fromCharCode(949) + this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+        }
+
+        // var beforeSize = Math.floor(Math.random() * n);
+        var beforeSize = Math.floor(n/2);
+
+        var before = this.#kleene(beforeSize, sigma, probOr, probKleene, probEmpty);
+        var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
+
+        if (Math.random() <= probOr) {
+            return before + " + " + after;
+        }
+
+        return before + after;
+    }
+
+}
+
 class Edge {
 
     constructor(id, fromNode, toNode) {
@@ -76,14 +119,14 @@ class Edge {
             ctx.stroke();
 
             // Draw chevron at end of arc
-            drawChevron(x2, y2, this.angle, Math.PI/10);
-            // ctx.beginPath();
-            // ctx.moveTo(x2, y2);
-            // ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
-            // ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
-            // ctx.closePath();
-            // ctx.stroke();
-            // ctx.fill();
+            // drawChevron(x2, y2, this.angle, Math.PI/10);
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2+CHEVRON*Math.cos(this.angle-Math.PI/10), y2-CHEVRON*Math.sin(this.angle-Math.PI/10));
+            ctx.lineTo(x2-CHEVRON*Math.cos(this.angle+Math.PI/10), y2-CHEVRON*Math.sin(this.angle+Math.PI/10));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#000000";
@@ -190,13 +233,6 @@ class Edge {
 
             // Draw chevron at end of edge
             drawChevron(toX, toY, this.angle, Math.PI/6);
-            // ctx.beginPath();
-            // ctx.moveTo(toX, toY);
-            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
-            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
-            // ctx.closePath();
-            // ctx.stroke();
-            // ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#fcfcfc";
@@ -381,6 +417,9 @@ ctx.textAlign = "center";
 ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
+
+const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
+console.log(regular_expression.regex);
 
 // way to do it without?
 var state = null;
