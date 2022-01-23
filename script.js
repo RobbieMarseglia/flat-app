@@ -127,13 +127,15 @@ class Edge {
 
             var xi = x2 + RADIUS*Math.cos(alpha);
             var yi = y2 - RADIUS*Math.sin(alpha);
+
+            var beta = Math.atan2(yi-y2,xi-x2);
             
             // dynamically draw chevron
             // drawChevron(xi, yi, this.angle, Math.PI/5);
             ctx.beginPath();
             ctx.moveTo(xi, yi);
-            ctx.lineTo(xi+CHEVRON*Math.cos(this.angle-Math.PI/5), yi+CHEVRON*Math.sin(this.angle-Math.PI/5));
-            ctx.lineTo(xi+CHEVRON*Math.cos(this.angle+Math.PI/5), yi+CHEVRON*Math.sin(this.angle+Math.PI/5));
+            ctx.lineTo(xi+CHEVRON*Math.cos(beta-Math.PI/5), yi+CHEVRON*Math.sin(beta-Math.PI/5));
+            ctx.lineTo(xi+CHEVRON*Math.cos(beta+Math.PI/5), yi+CHEVRON*Math.sin(beta+Math.PI/5));
             ctx.closePath();
             ctx.stroke();
             ctx.fill();
@@ -266,6 +268,15 @@ class Node {
 }
 
 function drawChevron(x, y, angleEdge, angleHead) {
+
+    // ctx.beginPath();
+    // ctx.moveTo(xi, yi);
+    // ctx.lineTo(xi+CHEVRON*Math.cos(this.angle-Math.PI/5), yi+CHEVRON*Math.sin(this.angle-Math.PI/5));
+    // ctx.lineTo(xi+CHEVRON*Math.cos(this.angle+Math.PI/5), yi+CHEVRON*Math.sin(this.angle+Math.PI/5));
+    // ctx.closePath();
+    // ctx.stroke();
+    // ctx.fill();
+
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x-CHEVRON*Math.cos(angleEdge - angleHead), y-CHEVRON*Math.sin(angleEdge - angleHead));
