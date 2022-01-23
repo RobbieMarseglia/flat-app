@@ -76,14 +76,14 @@ class Edge {
             ctx.stroke();
 
             // Draw chevron at end of arc
-            drawChevron(x2, y2, this.angle, Math.PI/10);
-            // ctx.beginPath();
-            // ctx.moveTo(x2, y2);
-            // ctx.lineTo(x2+CHEVRON*Math.cos(angle-Math.PI/10), y2-CHEVRON*Math.sin(angle-Math.PI/10));
-            // ctx.lineTo(x2-CHEVRON*Math.cos(angle+Math.PI/10), y2-CHEVRON*Math.sin(angle+Math.PI/10));
-            // ctx.closePath();
-            // ctx.stroke();
-            // ctx.fill();
+            // drawChevron(x2, y2, this.angle, Math.PI/10);
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2+CHEVRON*Math.cos(this.angle-Math.PI/10), y2-CHEVRON*Math.sin(this.angle-Math.PI/10));
+            ctx.lineTo(x2-CHEVRON*Math.cos(this.angle+Math.PI/10), y2-CHEVRON*Math.sin(this.angle+Math.PI/10));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#000000";
