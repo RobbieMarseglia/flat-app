@@ -46,9 +46,18 @@ class Regex {
         var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
 
         if (Math.random() <= probOr) {
+            if (before == after) {
+                return before;
+            }
             return before + " + " + after;
         }
 
+        console.log(before, after);
+        if (before == String.fromCharCode(949)) {
+            return after;
+        } else if (after == String.fromCharCode(949)) {
+            return before;
+        }
         return before + after;
     }
 
