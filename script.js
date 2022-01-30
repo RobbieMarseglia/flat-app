@@ -2,6 +2,7 @@ let RADIUS = 40;        // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10;    // padding either side of transitions for easier selection
 let FONTSIZE = 16;      // font size for labels
+let EPSILON = String.fromCharCode(949); // epsilon symbol
 const nodes = [];       // array of states
 var edges = [];         // array of transitions
 var sid = 0;            // unique state ID
@@ -14,7 +15,101 @@ var startTid = -1;      // ID of start transition
 class Regex {
 
     constructor(n, sigma, probOr, probKleene, probEmpty) {
-        this.regex = this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+        this.postfix = "";
+        this.regex = this.#kleene(3, sigma, probOr, probKleene, probEmpty);
+        this.nfa = this.#regexToNfa(this.postfix);
+    }
+
+    #regexToNfa(regex) {
+        const nfa = [];
+        const s = [];
+        var start = 0;
+        var end = 1;
+        var count = 0;
+        var c1 = 0;
+        var c2 = 0;
+
+        for (var i=0; i<regex.length; i++) {
+            if (regex[i] == '*') {
+                var top = s.pop();
+                var r1 = top[0];
+                var r2 = top[1];
+                c1 = count++;
+                c2 = count++;
+                s.push([c1, c2]);
+                nfa.push({});
+                nfa.push({});
+                if (!(nfa[r2][EPSILON])) {
+                    nfa[r2][EPSILON] = [];
+                }
+                nfa[r2][EPSILON].push(r1, c2);
+                nfa[c1][EPSILON] = [r1, c2];
+                if (start == r1) {
+                    start = c1;
+                }
+                if (end == r2) {
+                    end = c2;
+                }
+            } else if (regex[i] == '.') {
+                var top1 = s.pop();
+                var top2 = s.pop();
+                var r11 = top1[0];
+                var r12 = top1[1];
+                var r21 = top2[0];
+                var r22 = top2[1];
+                s.push([r21, r12]);
+                if (!(nfa[r22][EPSILON])) {
+                    nfa[r22][EPSILON] = [];
+                }
+                nfa[r22][EPSILON].push(r11);
+                if (start == r11) {
+                    start = r21;
+                }
+                if (end == r22) {
+                    end = r12;
+                }
+            } else if (regex[i] == '+') {
+                c1 = count++;
+                c2 = count++;
+                nfa.push({});
+                nfa.push({});
+                var top1 = s.pop();
+                var top2 = s.pop();
+                var r11 = top1[0];
+                var r12 = top1[1];
+                var r21 = top2[0];
+                var r22 = top2[1];
+                s.push([c1,c2]);
+                nfa[c1][EPSILON] = [r21, r11];
+                if (!(nfa[r12][EPSILON])) {
+                    nfa[r12][EPSILON] = [];
+                }
+                nfa[r12][EPSILON].push(c2);
+                if (!(nfa[r22][EPSILON])) {
+                    nfa[r22][EPSILON] = [];
+                }
+                nfa[r22][EPSILON].push(c2);
+                if (start == r11 || start == r21) {
+                    start = c1;
+                }
+                if (end == r22 || end == r12) {
+                    end = c2;
+                }
+            } else {
+                c1 = count++;
+                c2 = count++;
+                nfa.push({});
+                nfa.push({});
+                s.push([c1,c2]);
+                nfa[c1][regex[i]] = [c2];
+            }
+        }
+
+        return {
+            "table" : nfa,
+            "start" : start,
+            "end" : end
+        };
     }
 
     #kleene(n, sigma, probOr, probKleene, probEmpty) {
@@ -25,39 +120,49 @@ class Regex {
             } else {
                 expr = expr + "*";
             }
+            this.postfix += "*";
         }
         return expr;
     }
 
     #expression(n, sigma, probOr, probKleene, probEmpty) {
         // if (n == 0) {
-        //     return String.fromCharCode(949);
+        //     return EPSILON;
         // } else if (n == 1) {
         if (n < 2) {
-            return sigma[Math.floor(Math.random() * sigma.length)];
+            var symbol = sigma[Math.floor(Math.random() * sigma.length)];
+            this.postfix += symbol;
+            return symbol;
         } else if (Math.random() <= probEmpty) {
-            return String.fromCharCode(949) + this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+            this.postfix += EPSILON;
+            var after = this.#kleene(n-1, sigma, probOr, probKleene, probEmpty);
+            this.postfix += "+";
+            return "(" + EPSILON + " + " + after + ")";
         }
 
         // var beforeSize = Math.floor(Math.random() * n);
         var beforeSize = Math.floor(n/2);
 
+        // console.log(beforeSize, n-beforeSize);
+
         var before = this.#kleene(beforeSize, sigma, probOr, probKleene, probEmpty);
         var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
 
         if (Math.random() <= probOr) {
-            if (before == after) {
-                return before;
-            }
-            return before + " + " + after;
+            // if (before == after) {
+            //     return before;
+            // }
+            this.postfix += "+";
+            return "(" + before + " + " + after + ")";
         }
 
-        console.log(before, after);
-        if (before == String.fromCharCode(949)) {
-            return after;
-        } else if (after == String.fromCharCode(949)) {
-            return before;
-        }
+        // console.log(before, after);
+        // if (before == EPSILON) {
+        //     return after;
+        // } else if (after == EPSILON) {
+        //     return before;
+        // }
+        this.postfix += ".";
         return before + after;
     }
 
@@ -429,6 +534,8 @@ var fromY = 0;
 
 const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
 console.log(regular_expression.regex);
+const nfa = regular_expression.nfa;
+console.log(nfa.table);
 
 // way to do it without?
 var state = null;
@@ -449,7 +556,7 @@ window.addEventListener("keydown",
         if (addLabel != null && event.key.length == 1) {
             var length = addLabel.label.length;
             if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
-                addLabel.label = addLabel.label.slice(0,-1) + String.fromCharCode(949);
+                addLabel.label = addLabel.label.slice(0,-1) + EPSILON;
             } else {
                 addLabel.label += event.key;
             }
