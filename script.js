@@ -525,6 +525,7 @@ function updateCanvas(eventType) {
 }
 
 var canvas = document.getElementById('flat-canvas');
+// var regex = document.getElementById('regex-generator');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle = "#fcfcfc";
 ctx.textAlign = "center";
