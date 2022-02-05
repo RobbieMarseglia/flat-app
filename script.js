@@ -415,6 +415,43 @@ class Node {
     }
 }
 
+function getSymbols(label) {
+    var s = new Set();
+    var symbols = ["a", "b", EPSILON];
+    for (var i=0; i<label.length; i++) {
+        if (label[i] in symbols) {
+            s.add(label[i]);
+        }
+    }
+    return s.values();
+}
+
+function transTable() {
+    var nfa = {};
+    var final = [];
+    for (var i=0; i<nodes.length; i++) {
+        var n = nodes[i];
+        nfa[n.id] = {};
+        if (n.accept) {
+            final.push(n.id);
+        }
+    }
+    for (var i=0; i<edges.length; i++) {
+        var e = edges[i];
+        var symbols = getSymbols(e.label);
+        for (var s of symbols) {
+            if (!(nfa[e.fromNode.id][s])) {
+                nfa[e.fromNode.id][s] = [];
+            }
+            nfa[e.fromNode][s].push(e.toNode.id);
+        }
+    }
+    return {
+        table : nfa,
+        accept : final
+    };
+}
+
 function drawChevron(x, y, angleEdge, angleHead) {
     ctx.beginPath();
     ctx.moveTo(x, y);
