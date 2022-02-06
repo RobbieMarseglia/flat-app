@@ -415,11 +415,50 @@ class Node {
     }
 }
 
+function eClose(states, nodeClosure, nfa) {
+    var closed = new Set();
+    for (var i=0; i<states.length; i++) {
+        var n = states[i];
+        if (!nodeClosure.has(n)) {
+            var nClosed = new Set();
+            var eStates = close(n, nodeClosure, nClosed, nfa);
+            nodeClosure[n] = [];
+            for (var q of eStates) {
+                nodeClosure[n].push(q);
+            }
+        }
+        for (var q of nodeClosure[n]) {
+            closed.add(q);
+        }
+    }
+    return closed.values();
+}
+
+function close(k, nodeClosure, nClosed, nfa) {
+    if (!nodeClosure[k]) { // if E-CLOSE(k) not yet calculated
+        nClosed.add(k);
+        if (nfa[k][EPSILON]) { // if state k has epsilon transitions
+            for (var q of nfa[k][EPSILON]) { // for each state immediately reachable via epsilon transitions from state k
+                if (!nClosed.has(q)) { // if state q not in E-CLOSE(n)
+                    for (var p of close(q, nodeClosure, nClosed, closed)) { // add each state from E-CLOSE(q) to E-CLOSE(n)
+                        nClosed.add(p);
+                    }
+                }
+            }
+        }
+    } else { // if E-CLOSE(k) already calculated
+        for (var q of nodeClosure[k]) { // add each state from E-CLOSE(k) to E-CLOSE(n)
+            nClosed.add(q);
+        }
+    }
+    return nClosed.values();
+}
+
 function getSymbols(label) {
     var s = new Set();
-    var symbols = ["a", "b", EPSILON];
+    var symbols = ['a', 'b', EPSILON];
     for (var i=0; i<label.length; i++) {
-        if (label[i] in symbols) {
+        if (symbols.includes(label[i])) {
             s.add(label[i]);
         }
     }
@@ -443,7 +482,7 @@ function transTable() {
             if (!(nfa[e.fromNode.id][s])) {
                 nfa[e.fromNode.id][s] = [];
             }
-            nfa[e.fromNode][s].push(e.toNode.id);
+            nfa[e.fromNode.id][s].push(e.toNode.id);
         }
     }
     return {
