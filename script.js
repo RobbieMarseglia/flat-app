@@ -3,6 +3,7 @@ let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10;    // padding either side of transitions for easier selection
 let FONTSIZE = 16;      // font size for labels
 let EPSILON = String.fromCharCode(949); // epsilon symbol
+let SIGMA = ['a','b',EPSILON]; // fsm alphabet
 const nodes = [];       // array of states
 var edges = [];         // array of transitions
 var sid = 0;            // unique state ID
@@ -417,12 +418,10 @@ class Node {
 
 function eClose(states, nodeClosure, nfa) {
     var closed = new Set();
-    for (var i=0; i<states.length; i++) {
-        var n = states[i];
-        if (!nodeClosure.has(n)) {
+    for (var n of states) {
+        if (nodeClosure[n].length == 0) {
             var nClosed = new Set();
             var eStates = close(n, nodeClosure, nClosed, nfa);
-            nodeClosure[n] = [];
             for (var q of eStates) {
                 nodeClosure[n].push(q);
             }
@@ -435,12 +434,12 @@ function eClose(states, nodeClosure, nfa) {
 }
 
 function close(k, nodeClosure, nClosed, nfa) {
-    if (!nodeClosure[k]) { // if E-CLOSE(k) not yet calculated
+    if (nodeClosure[k].length == 0) { // if E-CLOSE(k) not yet calculated
         nClosed.add(k);
-        if (nfa[k][EPSILON]) { // if state k has epsilon transitions
+        if (nfa[k].length != 0 && EPSILON in nfa[k]) { // if state k has epsilon transitions
             for (var q of nfa[k][EPSILON]) { // for each state immediately reachable via epsilon transitions from state k
                 if (!nClosed.has(q)) { // if state q not in E-CLOSE(n)
-                    for (var p of close(q, nodeClosure, nClosed, closed)) { // add each state from E-CLOSE(q) to E-CLOSE(n)
+                    for (var p of close(q, nodeClosure, nClosed, nfa)) { // add each state from E-CLOSE(q) to E-CLOSE(n)
                         nClosed.add(p);
                     }
                 }
@@ -457,9 +456,9 @@ function close(k, nodeClosure, nClosed, nfa) {
 function getSymbols(label) {
     var s = new Set();
     var symbols = ['a', 'b', EPSILON];
-    for (var i=0; i<label.length; i++) {
-        if (symbols.includes(label[i])) {
-            s.add(label[i]);
+    for (var char of label) {
+        if (symbols.includes(char)) {
+            s.add(char);
         }
     }
     return s.values();
@@ -468,23 +467,33 @@ function getSymbols(label) {
 function transTable() {
     var nfa = {};
     var final = [];
-    for (var i=0; i<nodes.length; i++) {
-        var n = nodes[i];
+    for (var n of nodes) {
         nfa[n.id] = {};
+        for (var s of SIGMA) {
+            nfa[n.id][s] = [];
+        }
         if (n.accept) {
             final.push(n.id);
         }
     }
-    for (var i=0; i<edges.length; i++) {
-        var e = edges[i];
+    for (var e of edges) {
         var symbols = getSymbols(e.label);
         for (var s of symbols) {
-            if (!(nfa[e.fromNode.id][s])) {
-                nfa[e.fromNode.id][s] = [];
-            }
             nfa[e.fromNode.id][s].push(e.toNode.id);
         }
     }
+
+    // var nodeClosure = [];
+    // var nodeIds = [];
+    // for (var n of nodes) {
+    //     nodeClosure[n.id] = [];
+    //     nodeIds.push(n.id);
+    // }
+
+    // var s = eClose(nodeIds, nodeClosure, nfa);
+
+    // console.log(nodeClosure);
+
     return {
         table : nfa,
         accept : final
@@ -609,10 +618,10 @@ ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
 
-const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
-console.log(regular_expression.regex);
-const nfa = regular_expression.nfa;
-console.log(nfa.table);
+// const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
+// console.log(regular_expression.regex);
+// const nfa = regular_expression.nfa;
+// console.log(nfa.table);
 
 // way to do it without?
 var state = null;
