@@ -416,6 +416,24 @@ class Node {
     }
 }
 
+function nodeSubset(states, symbol, nodeClosure, nfa) {
+    var subset = new Set();
+    for (var s of states) {
+        for (var t in nfa[s]) {
+            if (t == symbol) {
+                for (var n of nfa[s][t]) {
+                    subset.add(n);
+                }
+            }
+        }
+    }
+    var nodeIds  = [];
+    for (var n of subset.values()) {
+        nodeIds.push(n);
+    }
+    return eClose(nodeIds, nodeClosure, nfa);
+}
+
 function eClose(states, nodeClosure, nfa) {
     var closed = new Set();
     for (var n of states) {
@@ -489,6 +507,8 @@ function transTable() {
     //     nodeClosure[n.id] = [];
     //     nodeIds.push(n.id);
     // }
+
+    // console.log(nodeSubset([0,1], 'a', nodeClosure, nfa));
 
     // var s = eClose(nodeIds, nodeClosure, nfa);
 
