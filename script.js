@@ -110,7 +110,7 @@ class Regex {
             "table" : nfa,
             "start" : start,
             "end" : end
-        };
+        }
     }
 
     #kleene(n, sigma, probOr, probKleene, probEmpty) {
@@ -416,6 +416,57 @@ class Node {
     }
 }
 
+function subsetConstruct(nfa, final) {
+    const symbols = ['a', 'b'];
+
+    const acceptDfa = [];
+
+    const dfa = {};
+    var dfaId = 0;
+    const dfaIds = {};
+
+    const nodeClosure = [];
+    for (const [n, t] of Object.entries(nfa)) {
+        nodeClosure[n] = [];
+    }
+
+    var firstState = eClose([startSid], nodeClosure, nfa);
+    dfa[dfaId] = {};
+    dfaIds[firstState] = dfaId++;
+    for (var n of firstState) {
+        if (n in final) {
+            acceptDfa.push(dfaIds[firstState]);
+            break;
+        }
+    }
+
+    const nodeQueue = [firstState];
+    
+    while (nodeQueue.length > 0) {
+        var currentState = nodeQueue.shift();
+        for (var s of symbols) {
+            var subset = nodeSubset(currentState, s, nodeClosure, nfa).sort();
+            if (!(subset in dfaIds)) {
+                dfa[dfaId] = {};
+                dfaIds[subset] = dfaId++;
+                for (var n of subset) {
+                    if (final.includes(n)) {
+                        acceptDfa.push(dfaIds[subset]);
+                        break;
+                    }
+                }
+                nodeQueue.push(subset);
+            }
+            dfa[dfaIds[currentState]][s] = dfaIds[subset];
+        }
+    }
+
+    return {
+        table : dfa,
+        accept : acceptDfa
+    }
+}
+
 function nodeSubset(states, symbol, nodeClosure, nfa) {
     var subset = new Set();
     for (var s of states) {
@@ -448,7 +499,11 @@ function eClose(states, nodeClosure, nfa) {
             closed.add(q);
         }
     }
-    return closed.values();
+    const values = [];
+    for (var v of closed.values()) {
+        values.push(v);
+    }
+    return values;
 }
 
 function close(k, nodeClosure, nClosed, nfa) {
@@ -517,7 +572,7 @@ function transTable() {
     return {
         table : nfa,
         accept : final
-    };
+    }
 }
 
 function drawChevron(x, y, angleEdge, angleHead) {
@@ -543,7 +598,7 @@ function circleFromPoints(x1, y1, x2, y2, x3, y3) {
         'x' : x,
         'y' : y,
         'radius' : Math.hypot(x-x1, y-y1)
-    };
+    }
 }
 
 function getFromId(id, arr) {
@@ -642,6 +697,22 @@ var fromY = 0;
 // console.log(regular_expression.regex);
 // const nfa = regular_expression.nfa;
 // console.log(nfa.table);
+
+const nfa = {};
+
+nfa[0] = {};
+nfa[0][EPSILON] = [1];
+nfa[0]['a'] = [2];
+
+nfa[1] = {};
+nfa[1]['a'] = [0];
+
+nfa[2] = {};
+nfa[2]['a'] = [1];
+nfa[2]['b'] = [1,2];
+
+startSid = 0;
+console.log(subsetConstruct(nfa, [1]));
 
 // way to do it without?
 var state = null;
