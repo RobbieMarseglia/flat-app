@@ -17,8 +17,8 @@ class Regex {
 
     constructor(n, sigma, probOr, probKleene, probEmpty) {
         this.postfix = "";
-        this.regex = this.#kleene(3, sigma, probOr, probKleene, probEmpty);
-        this.nfa = this.#regexToNfa(this.postfix);
+        this.regex = this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+        this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
     }
 
     #regexToNfa(regex) {
@@ -416,13 +416,87 @@ class Node {
     }
 }
 
-function subsetConstruct(nfa, final) {
+function isomorphic(user, regex) {
+    const symbols = ['a', 'b'];
+    const accept  = user.accept.concat(regex.accept);
+    const parent = {};
+    const rank = {};
+    const pairStack = [];
+
+    for (var s in user.dfa) {
+        makeSet(s, parent, rank);
+    }
+    for (var s in regex.dfa) {
+        makeSet(s, parent, rank);
+    }
+
+    var equal = true;
+
+    equal = unionCheck(user.start, regex.start, parent, rank, accept);
+
+    pairStack.push([user.start, regex.start]);
+
+    while (pairStack.length > 0 && equal) {
+        pair = pairStack.pop();
+        for (var c of symbols) {
+            var r1 = findSet(user.dfa[pair[0]][c], parent);
+            var r2 = findSet(regex.dfa[pair[1]][c], parent);
+            if (r1 != r2) {
+                equal = unionCheck(r1, r2, parent, rank, accept);
+                pairStack.push([r1, r2]);
+            }
+        }
+    }
+
+    return equal;
+}
+
+function makeSet(x, parent, rank) {
+    parent[x] = x;
+    rank[x] = 0;
+}
+
+function unionCheck(x, y, parent, rank, accept) {
+    var a = findSet(x, parent);
+    var b = findSet(y, parent);
+    if (accept.includes(a)) {
+        if (!accept.includes(b)) {
+            return false;
+        }
+    } else {
+        if (accept.includes(b)) {
+            return false;
+        }
+    }
+    link(a, b, parent, rank);
+    return true;
+}
+
+function link(x, y, parent, rank) {
+    if (rank[x] > rank[y]) {
+        parent[y] = x;
+    } else {
+        parent[x] = y;
+        if (rank[x] == rank[y]) {
+            rank[y] += 1;
+        }
+    }
+}
+
+function findSet(x, parent) {
+    if (x != parent[x]) {
+        parent[x] = findSet(parent[x]);
+    }
+    return parent[x];
+}
+
+function subsetConstruct(nfa, final, dfaId) {
     const symbols = ['a', 'b'];
 
-    const acceptDfa = [];
+    const accept = [];
+    var start = dfaId;
 
     const dfa = {};
-    var dfaId = 0;
     const dfaIds = {};
 
     const nodeClosure = [];
@@ -435,7 +509,7 @@ function subsetConstruct(nfa, final) {
     dfaIds[firstState] = dfaId++;
     for (var n of firstState) {
         if (n in final) {
-            acceptDfa.push(dfaIds[firstState]);
+            accept.push(dfaIds[firstState]);
             break;
         }
     }
@@ -451,7 +525,7 @@ function subsetConstruct(nfa, final) {
                 dfaIds[subset] = dfaId++;
                 for (var n of subset) {
                     if (final.includes(n)) {
-                        acceptDfa.push(dfaIds[subset]);
+                        accept.push(dfaIds[subset]);
                         break;
                     }
                 }
@@ -462,8 +536,9 @@ function subsetConstruct(nfa, final) {
     }
 
     return {
-        table : dfa,
-        accept : acceptDfa
+        dfa : dfa,
+        accept : accept,
+        start : start
     }
 }
 
@@ -698,21 +773,45 @@ var fromY = 0;
 // const nfa = regular_expression.nfa;
 // console.log(nfa.table);
 
-const nfa = {};
+const nfaAA = {};
 
-nfa[0] = {};
-nfa[0][EPSILON] = [1];
-nfa[0]['a'] = [2];
-
-nfa[1] = {};
-nfa[1]['a'] = [0];
-
-nfa[2] = {};
-nfa[2]['a'] = [1];
-nfa[2]['b'] = [1,2];
+nfaAA[0] = {};
+nfaAA[0]['a'] = [1];
+nfaAA[1] = {};
+nfaAA[1]['a'] = [2];
+nfaAA[2] = {};
 
 startSid = 0;
-console.log(subsetConstruct(nfa, [1]));
+const user = subsetConstruct(nfaAA, [2], 0);
+
+const nfaAB = {};
+
+nfaAB[0] = {};
+nfaAB[0]['a'] = [1];
+nfaAB[1] = {};
+nfaAB[1]['b'] = [2];
+nfaAB[2] = {};
+
+startSid = user.dfa.length - 1;
+const regex = subsetConstruct(nfaAB, [2], 0);
+
+
+
+// const nfa = {};
+
+// nfa[0] = {};
+// nfa[0][EPSILON] = [1];
+// nfa[0]['a'] = [2];
+
+// nfa[1] = {};
+// nfa[1]['a'] = [0];
+
+// nfa[2] = {};
+// nfa[2]['a'] = [1];
+// nfa[2]['b'] = [1,2];
+
+// startSid = 0;
+// console.log(subsetConstruct(nfa, [1], 0));
 
 // way to do it without?
 var state = null;
