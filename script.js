@@ -417,17 +417,20 @@ class Node {
 }
 
 function isomorphic(user, regex) {
+    // console.log(user.dfa);
+    // console.log(regex.dfa);
+
     const symbols = ['a', 'b'];
     const accept  = user.accept.concat(regex.accept);
     const parent = {};
     const rank = {};
     const pairStack = [];
 
-    for (var s in user.dfa) {
-        makeSet(s, parent, rank);
+    for (var s of Object.keys(user.dfa)) {
+        makeSet(parseInt(s), parent, rank);
     }
-    for (var s in regex.dfa) {
-        makeSet(s, parent, rank);
+    for (var s of Object.keys(regex.dfa)) {
+        makeSet(parseInt(s), parent, rank);
     }
 
     var equal = true;
@@ -439,6 +442,7 @@ function isomorphic(user, regex) {
     while (pairStack.length > 0 && equal) {
         pair = pairStack.pop();
         for (var c of symbols) {
+            // console.log(parent[user.dfa[pair[0]][c]]);
             var r1 = findSet(user.dfa[pair[0]][c], parent);
             var r2 = findSet(regex.dfa[pair[1]][c], parent);
             if (r1 != r2) {
@@ -485,7 +489,7 @@ function link(x, y, parent, rank) {
 
 function findSet(x, parent) {
     if (x != parent[x]) {
-        parent[x] = findSet(parent[x]);
+        parent[x] = findSet(parent[x], parent);
     }
     return parent[x];
 }
@@ -508,7 +512,7 @@ function subsetConstruct(nfa, final, dfaId) {
     dfa[dfaId] = {};
     dfaIds[firstState] = dfaId++;
     for (var n of firstState) {
-        if (n in final) {
+        if (final.includes(n)) {
             accept.push(dfaIds[firstState]);
             break;
         }
@@ -792,10 +796,12 @@ nfaAB[1] = {};
 nfaAB[1]['b'] = [2];
 nfaAB[2] = {};
 
-startSid = user.dfa.length - 1;
-const regex = subsetConstruct(nfaAB, [2], 0);
+const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
 
+// console.log(user);
+// console.log(regex);
 
+console.log(isomorphic(user, regex));
 
 // const nfa = {};
 
