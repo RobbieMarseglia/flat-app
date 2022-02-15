@@ -772,52 +772,55 @@ ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
 
+// ===== Regex =====
 // const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
 // console.log(regular_expression.regex);
 // const nfa = regular_expression.nfa;
 // console.log(nfa.table);
 
-const nfaAA = {};
+// == Isomorphism ==
+// const nfaAA = {};
 
-nfaAA[0] = {};
-nfaAA[0]['a'] = [1];
-nfaAA[1] = {};
-nfaAA[1]['a'] = [2];
-nfaAA[2] = {};
-
-startSid = 0;
-const user = subsetConstruct(nfaAA, [2], 0);
-
-const nfaAB = {};
-
-nfaAB[0] = {};
-nfaAB[0]['a'] = [1];
-nfaAB[1] = {};
-nfaAB[1]['b'] = [2];
-nfaAB[2] = {};
-
-const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
-
-// console.log(user);
-// console.log(regex);
-
-console.log(isomorphic(user, regex));
-
-// const nfa = {};
-
-// nfa[0] = {};
-// nfa[0][EPSILON] = [1];
-// nfa[0]['a'] = [2];
-
-// nfa[1] = {};
-// nfa[1]['a'] = [0];
-
-// nfa[2] = {};
-// nfa[2]['a'] = [1];
-// nfa[2]['b'] = [1,2];
+// nfaAA[0] = {};
+// nfaAA[0]['a'] = [1];
+// nfaAA[1] = {};
+// nfaAA[1]['a'] = [2];
+// nfaAA[2] = {};
 
 // startSid = 0;
-// console.log(subsetConstruct(nfa, [1], 0));
+// const user = subsetConstruct(nfaAA, [2], 0);
+
+// const nfaAB = {};
+
+// nfaAB[0] = {};
+// nfaAB[0]['a'] = [1];
+// nfaAB[1] = {};
+// nfaAB[1]['b'] = [2];
+// nfaAB[2] = {};
+
+// const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
+
+// console.log(user, regex);
+
+// console.log(isomorphic(user, regex));
+
+// ==== Subset ====
+const nfa = {};
+
+nfa[0] = {};
+nfa[0][EPSILON] = [1];
+nfa[0]['a'] = [2];
+
+nfa[1] = {};
+nfa[1]['a'] = [0];
+
+nfa[2] = {};
+nfa[2]['a'] = [1];
+nfa[2]['b'] = [1,2];
+
+startSid = 0;
+console.log(nfa);
+console.log(subsetConstruct(nfa, [1], 0));
 
 // way to do it without?
 var state = null;
