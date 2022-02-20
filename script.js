@@ -21,87 +21,126 @@ class Regex {
         this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
     }
 
+    /**
+     * Convert regular expression into equivalent NFA using Thompson's construction
+     * @param {String} regex A regular expression in postfix
+     * @returns {
+     *  Array<{
+     *      table: 
+     *          Array<{
+     *              stateID: Number,
+     *              symbol: String,
+     *              stateIDs: Array<Number>
+     *          }>,
+     *      start: Number,
+     *      end: Array<Number>
+     *  }>
+     * } State transition table for NFA accepting regex
+     *  (alongside start state and accept states)
+     */
     #regexToNfa(regex) {
-        const nfa = [];
-        const s = [];
-        var start = 0;
-        var end = 1;
-        var count = 0;
-        var c1 = 0;
-        var c2 = 0;
+        const nfa = []; // State transition table
+        const s = [];   // Stack of pairs of states to next consider
+        var start = 0;  // ID of start state
+        var end = 1;    // ID of accept state
+        var count = 0;  // Counter for state IDs
+        var c1 = 0;     // ID of a state to add to NFA
+        var c2 = 0;     // ID of another state to add to NFA
 
+        // Iterate through each character in the postfix regex
         for (var i=0; i<regex.length; i++) {
-            if (regex[i] == '*') {
+            if (regex[i] == '*') { // Kleene star operator
+                // Pop last pair of states from stack (sub-NFA)
                 var top = s.pop();
-                var r1 = top[0];
-                var r2 = top[1];
+                var r1 = top[0]; // start of sub-NFA
+                var r2 = top[1]; // end of sub-NFA
+                // Set IDs of two new states
                 c1 = count++;
                 c2 = count++;
+                // Push new states onto stack
                 s.push([c1, c2]);
+                // Add new states to NFA
                 nfa.push({});
                 nfa.push({});
-                if (!(nfa[r2][EPSILON])) {
+                if (!(nfa[r2][EPSILON])) { // initialise epsilon transitions if undefined
                     nfa[r2][EPSILON] = [];
                 }
+                // Loop back to start of sub-NFA or continue
                 nfa[r2][EPSILON].push(r1, c2);
+                // Go to start of sub-NFA or skip
                 nfa[c1][EPSILON] = [r1, c2];
+                // Set new start and end states if necessary
                 if (start == r1) {
                     start = c1;
                 }
                 if (end == r2) {
                     end = c2;
                 }
-            } else if (regex[i] == '.') {
+            } else if (regex[i] == '.') { // Concatenation operator
+                // Pop last two pairs of states from stack (two sub-NFAs)
                 var top1 = s.pop();
                 var top2 = s.pop();
                 var r11 = top1[0];
                 var r12 = top1[1];
                 var r21 = top2[0];
                 var r22 = top2[1];
+                // Push 'start' of second pair and 'end' of first pair onto stack
                 s.push([r21, r12]);
-                if (!(nfa[r22][EPSILON])) {
+                if (!(nfa[r22][EPSILON])) { // initialise epsilon transitions if undefined
                     nfa[r22][EPSILON] = [];
                 }
+                // Connect first sub-NFA to second with epsilon transition
                 nfa[r22][EPSILON].push(r11);
+                // Set new start and end states if necessary
                 if (start == r11) {
                     start = r21;
                 }
                 if (end == r22) {
                     end = r12;
                 }
-            } else if (regex[i] == '+') {
+            } else if (regex[i] == '+') { // Or operator
+                // Set IDs of two new states and add to NFA
                 c1 = count++;
                 c2 = count++;
                 nfa.push({});
                 nfa.push({});
+                // Pop last two pairs of states from stack (two sub-NFAs)
                 var top1 = s.pop();
                 var top2 = s.pop();
                 var r11 = top1[0];
                 var r12 = top1[1];
                 var r21 = top2[0];
                 var r22 = top2[1];
+                // Push new states to stack
                 s.push([c1,c2]);
+                // Traverse to second sub-NFA or first sub-NFA
                 nfa[c1][EPSILON] = [r21, r11];
-                if (!(nfa[r12][EPSILON])) {
+                if (!(nfa[r12][EPSILON])) { // initialise epsilon transitions if undefined
                     nfa[r12][EPSILON] = [];
                 }
+                // Continue from end of first sub-NFA
                 nfa[r12][EPSILON].push(c2);
-                if (!(nfa[r22][EPSILON])) {
+                if (!(nfa[r22][EPSILON])) { // initialise epsilon transitions if undefined
                     nfa[r22][EPSILON] = [];
                 }
+                // Continue from end of second sub-NFA
                 nfa[r22][EPSILON].push(c2);
+                // Set new start and end states if necessary
                 if (start == r11 || start == r21) {
                     start = c1;
                 }
                 if (end == r22 || end == r12) {
                     end = c2;
                 }
-            } else {
+            } else { // symbol read
+                // Set IDs of two new states and add to NFA
                 c1 = count++;
                 c2 = count++;
                 nfa.push({});
                 nfa.push({});
+                // Push new states onto stack
                 s.push([c1,c2]);
+                // Connect the first state to the second via the symbol
                 nfa[c1][regex[i]] = [c2];
             }
         }
@@ -113,8 +152,19 @@ class Regex {
         }
     }
 
+    /**
+     * Closes expr in the Kleene star (*) operator with probability probKleene
+     * @param {Number} n Number of terms in regex
+     * @param {Array<String>} sigma Alphabet of regex
+     * @param {Number} probOr Probability Or (+) operator used in favour of Concatenation (.) operator
+     * @param {Number} probKleene Probability Kleene star (*) used
+     * @param {Number} probEmpty Probability epsilon character used
+     * @returns {String} Regular expression
+     */
     #kleene(n, sigma, probOr, probKleene, probEmpty) {
+        // Generate expression
         var expr = this.#expression(n, sigma, probOr, probKleene, probEmpty);
+        // Apply Kleene star operator with probability probKleene
         if (Math.random() <= probKleene) {
             if (expr.length > 1) {
                 expr = "(" + expr + ")*";
@@ -126,16 +176,27 @@ class Regex {
         return expr;
     }
 
+    /**
+     * Constructs a regular expression with operators and symbols included probabilistically
+     * @param {Number} n Number of terms in regex
+     * @param {Array<String>} sigma Alphabet of regex
+     * @param {Number} probOr Probability Or (+) operator used in favour of Concatenation (.) operator
+     * @param {Number} probKleene Probability Kleene star (*) used
+     * @param {Number} probEmpty Probability epsilon character used 
+     * @returns {String} Regular expression
+     */
     #expression(n, sigma, probOr, probKleene, probEmpty) {
         // if (n == 0) {
         //     return EPSILON;
         // } else if (n == 1) {
         if (n < 2) {
+            // Randomly select symbol from sigma
             var symbol = sigma[Math.floor(Math.random() * sigma.length)];
             this.postfix += symbol;
             return symbol;
-        } else if (Math.random() <= probEmpty) {
+        } else if (Math.random() <= probEmpty) { // use epsilon with probability probEmpty
             this.postfix += EPSILON;
+            // Generate smaller sub-expression
             var after = this.#kleene(n-1, sigma, probOr, probKleene, probEmpty);
             this.postfix += "+";
             return "(" + EPSILON + " + " + after + ")";
@@ -144,11 +205,11 @@ class Regex {
         // var beforeSize = Math.floor(Math.random() * n);
         var beforeSize = Math.floor(n/2);
 
-        // console.log(beforeSize, n-beforeSize);
-
+        // Generate two sub-expressions
         var before = this.#kleene(beforeSize, sigma, probOr, probKleene, probEmpty);
         var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
 
+        // Apply Or operator between the two with probability probOr
         if (Math.random() <= probOr) {
             // if (before == after) {
             //     return before;
@@ -157,7 +218,7 @@ class Regex {
             return "(" + before + " + " + after + ")";
         }
 
-        // console.log(before, after);
+        // Apply Concatenation operator between the two with probability 1-probOr
         // if (before == EPSILON) {
         //     return after;
         // } else if (after == EPSILON) {
@@ -189,6 +250,10 @@ class Edge {
         this.curved = false;
     }
 
+    /**
+     * Draws edge to canvas
+     * @param {CanvasRenderingContext2D} ctx 2D rendering context for drawing surface of FSM canvas
+     */
     draw(ctx) {
 
         ctx.strokeStyle = "#000000";
@@ -384,9 +449,12 @@ class Node {
         this.label = "";
         this.accept = false;
         this.dragging = false;
-        this.neighbours = [];
     }
 
+    /**
+     * Draws node to canvas
+     * @param {CanvasRenderingContext2D} ctx 2D rendering context for drawing surface of FSM canvas
+     */
     draw(ctx) {
         // Colour state red if highlighted
         if (this.id == highSid) {
@@ -418,16 +486,47 @@ class Node {
     }
 }
 
+/**
+ * Determines if DFAs given by 'user' and 'regex' accept the same language
+ * @param {
+ *  Array<{
+ *      dfa: 
+ *          Array<{
+ *              stateIdFrom: Number,
+ *              symbol: String,
+ *              stateIdTo: Number
+ *          }>,
+ *      start: Number,
+ *      accept: Array<Number>
+ *  }>
+ * } user State transition table, start state, and accept states defined for the user's DFA
+ * @param {
+ *  Array<{
+ *      dfa: 
+ *          Array<{
+ *              stateIdFrom: Number,
+ *              symbol: String,
+ *              stateIdTo: Number
+ *          }>,
+ *      start: Number,
+ *      accept: Array<Number>
+ *  }>
+ * } regex State transition table, start state, and accept states defined for the regex's DFA
+ * @returns {Boolean} True iff user DFA and regex DFA accept the same language
+ */
 function isomorphic(user, regex) {
-    // console.log(user.dfa);
-    // console.log(regex.dfa);
-
     const symbols = ['a', 'b'];
+    // Array of all accept states (state IDs are unique across both DFAs)
     const accept  = user.accept.concat(regex.accept);
+    // Each state has a set represented by a tree: 'parent' represents the root
+    //  of the tree for a given state
     const parent = {};
+    // Each state also has a rank denoting their height in their tree
     const rank = {};
+    // Stack containing pairs of states, the first from 'user' and the second from 'regex'
     const pairStack = [];
 
+    // Make sets for each state (represented as trees)
     for (var s of Object.keys(user.dfa)) {
         makeSet(parseInt(s), parent, rank);
     }
@@ -435,20 +534,30 @@ function isomorphic(user, regex) {
         makeSet(parseInt(s), parent, rank);
     }
 
+    // Assume DFAs are equal to begin with
     var equal = true;
 
+    // Calculate union of start states
     equal = unionCheck(user.start, regex.start, parent, rank, accept);
 
+    // Push start states of both DFAs to stack
     pairStack.push([user.start, regex.start]);
 
+    // While the stack is nonempty and condition of equivalence has not yet been violated
     while (pairStack.length > 0 && equal) {
+        // Pop next pair of states
         pair = pairStack.pop();
+        // For each symbol in the alphabet
         for (var c of symbols) {
-            // console.log(parent[user.dfa[pair[0]][c]]);
+            // Take transition via 'c' for each DFA and determine which set they belong to
+            //  (i.e., the root of the tree they're in)
             var r1 = findSet(user.dfa[pair[0]][c], parent);
             var r2 = findSet(regex.dfa[pair[1]][c], parent);
+            // If they belong to different sets
             if (r1 != r2) {
+                // Take the union of the sets
                 equal = unionCheck(r1, r2, parent, rank, accept);
+                // Push the traversed to-states onto the stack
                 pairStack.push([r1, r2]);
             }
         }
@@ -457,11 +566,28 @@ function isomorphic(user, regex) {
     return equal;
 }
 
+/**
+ * Create new tree rooted at state ID x (represents a set for x)
+ * @param {Number} x State ID
+ * @param {Array<Number>} parent Array of root nodes for each tree set
+ * @param {Array<Number>} rank Array of rank for each node
+ */
 function makeSet(x, parent, rank) {
     parent[x] = x;
     rank[x] = 0;
 }
 
+/**
+ * Calculates the union of sets x and y and whether the user and regex
+ *  DFAs are isomorphic up to this point
+ * @param {Number} x State ID
+ * @param {Number} y State ID
+ * @param {Array<Number>} parent Array of root nodes for each tree set
+ * @param {Array<Number>} rank Array of rank for each node
+ * @param {Boolean} accept Flag to see if user and regex DFAs are isomorphic
+ * @returns {Boolean} True iff the union of sets x and y contain either
+ *  only accepting states, or only non-accepting states
+ */
 function unionCheck(x, y, parent, rank, accept) {
     var a = findSet(x, parent);
     var b = findSet(y, parent);
@@ -478,6 +604,13 @@ function unionCheck(x, y, parent, rank, accept) {
     return true;
 }
 
+/**
+ * Sets the root node of the lower ranked state as the higher ranked state
+ * @param {Number} x State ID
+ * @param {Number} y State ID
+ * @param {Array<Number>} parent Array of root nodes for each tree set
+ * @param {Array<Number>} rank Array of rank for each node
+ */
 function link(x, y, parent, rank) {
     if (rank[x] > rank[y]) {
         parent[y] = x;
@@ -489,6 +622,12 @@ function link(x, y, parent, rank) {
     }
 }
 
+/**
+ * Finds the root node for state x
+ * @param {Number} x State ID
+ * @param {Array<Number>} parent Array of root nodes for each tree set
+ * @returns {Number} Root node for state x
+ */
 function findSet(x, parent) {
     if (x != parent[x]) {
         parent[x] = findSet(parent[x], parent);
@@ -496,6 +635,30 @@ function findSet(x, parent) {
     return parent[x];
 }
 
+/**
+ * Convert NFA to a DFA using subset construction
+ * @param {
+ *  Array<{
+ *      stateID: Number,
+ *      symbol: String,
+ *      stateIDs: Array<Number>
+ *  }>
+ * } nfa State transition table
+ * @param {Array<Number>} final NFA accept states
+ * @param {Number} dfaId ID of initial DFA state
+ * @returns {
+ *  Array<{
+ *      dfa: 
+ *          Array<{
+ *              stateIdFrom: Number,
+ *              symbol: String,
+ *              stateIdTo: Number
+ *          }>,
+ *      start: Number,
+ *      accept: Array<Number>
+ *  }>
+ * } State transition table, start state, and accept states defined for the resulting DFA
+ */
 function subsetConstruct(nfa, final, dfaId) {
     const symbols = ['a', 'b'];
 
@@ -543,11 +706,26 @@ function subsetConstruct(nfa, final, dfaId) {
 
     return {
         dfa : dfa,
-        accept : accept,
-        start : start
+        start : start,
+        accept : accept
     }
 }
 
+/**
+ * Calculates subset of states reached by reading 'symbol' from each state
+ *  in 'states' then applying E-CLOSE to it
+ * @param {Array<Number>} states Subset of states in NFA
+ * @param {String} symbol State transition symbol
+ * @param {Array<{stateID: Array<Number>}>} nodeClosure Closure set for each state in NFA
+ * @param {
+ *  Array<{
+ *      stateID: Number,
+ *      symbol: String,
+ *      stateIDs: Array<Number>
+ *  }>
+ * } nfa State transition table
+ * @returns {Array<Number>} Subset of NFA states that constitute a state in the DFA
+ */
 function nodeSubset(states, symbol, nodeClosure, nfa) {
     var subset = new Set();
     for (var s of states) {
@@ -566,6 +744,19 @@ function nodeSubset(states, symbol, nodeClosure, nfa) {
     return eClose(nodeIds, nodeClosure, nfa);
 }
 
+/**
+ * Calculates E-CLOSE of 'states'
+ * @param {Array<Number>} states Subset of states in NFA
+ * @param {Array<{stateID: Array<Number>}>} nodeClosure Closure set for each state in NFA
+ * @param {
+ *  Array<{
+ *      stateID: Number,
+ *      symbol: String,
+ *      stateIDs: Array<Number>
+ *  }>
+ * } nfa State transition table
+ * @returns {Array<Number>} Subset of states as a result of applying E-CLOSE to 'states'
+ */
 function eClose(states, nodeClosure, nfa) {
     var closed = new Set();
     for (var n of states) {
@@ -587,6 +778,20 @@ function eClose(states, nodeClosure, nfa) {
     return values;
 }
 
+/**
+ * Calculates E-CLOSE for a specific state k
+ * @param {Number} k State ID
+ * @param {Array<{stateID: Array<Number>}>} nodeClosure Closure set for each state in NFA 
+ * @param {Set<Number>} nClosed E-CLOSE set
+ * @param {
+ *  Array<{
+ *      stateID: Number,
+ *      symbol: String,
+ *      stateIDs: Array<Number>
+ *  }>
+ * } nfa State transition table
+ * @returns {IterableIterator<Number>} States reached through E-CLOSE(k)
+ */
 function close(k, nodeClosure, nClosed, nfa) {
     if (nodeClosure[k].length == 0) { // if E-CLOSE(k) not yet calculated
         nClosed.add(k);
@@ -607,6 +812,11 @@ function close(k, nodeClosure, nClosed, nfa) {
     return nClosed.values();
 }
 
+/**
+ * Extract symbols from transition label
+ * @param {String} label Label of transition
+ * @returns {IterableIterator<String>} Symbols extracted from 'label'
+ */
 function getSymbols(label) {
     var s = new Set();
     var symbols = ['a', 'b', EPSILON];
@@ -618,6 +828,21 @@ function getSymbols(label) {
     return s.values();
 }
 
+/**
+ * Create state transition table and accept states from
+ *  user defined NFA
+ * @returns {
+ *  Array<{
+ *      table: 
+ *          Array<{
+ *              stateID: Number,
+ *              symbol: String,
+ *              stateIDs: Array<Number>
+ *          }>,
+ *      accept: Array<Number>
+ *  }>
+ * } State transition table and accept states
+ */
 function transTable() {
     var nfa = {};
     var final = [];
@@ -656,6 +881,13 @@ function transTable() {
     }
 }
 
+/**
+ * Draw arrow (chevron) at the end of an edge
+ * @param {Number} x x-coordinate for end of edge
+ * @param {Number} y y-coordinate for end of edge
+ * @param {Number} angleEdge Angle (radians) between positive x-axis and edge
+ * @param {Number} angleHead Angle (radians) between edge and chevron
+ */
 function drawChevron(x, y, angleEdge, angleHead) {
 
     // ctx.beginPath();
@@ -675,6 +907,22 @@ function drawChevron(x, y, angleEdge, angleHead) {
     ctx.fill();
 }
 
+/**
+ * Construct a circle given three points
+ * @param {Number} x1 x-coordinate of point 1
+ * @param {Number} y1 y-coordinate of point 1
+ * @param {Number} x2 x-coordinate of point 2
+ * @param {Number} y2 y-coordinate of point 2
+ * @param {Number} x3 x-coordinate of point 3
+ * @param {Number} y3 y-coordinate of point 3
+ * @returns {
+ *  Array<{
+ *      x: Number,
+ *      y: Number,
+ *      radius: Number
+ *  }>
+ * } Coordinates for centre of circle and the circle's radius
+ */
 function circleFromPoints(x1, y1, x2, y2, x3, y3) {
     // Find circle equation from three points (above)
     var a = x1*(y2-y3)-y1*(x2-x3)+x2*y3-x3*y2;
@@ -691,6 +939,12 @@ function circleFromPoints(x1, y1, x2, y2, x3, y3) {
     }
 }
 
+/**
+ * Return index from state/edge array given a state/edge ID respectively
+ * @param {Number} id State/Edge ID
+ * @param {Number} arr State/Edge array
+ * @returns {Number} Index of state/edge
+ */
 function getFromId(id, arr) {
     for (var i=0; i<arr.length; i++) {
         if (arr[i].id == id) {
@@ -699,6 +953,13 @@ function getFromId(id, arr) {
     }
 }
 
+/**
+ * Return index of edge at the cursor's position
+ *  (or -1 if cursor isn't hovering over any edge)
+ * @param {Number} x x-position of cursor
+ * @param {Number} y y-position of cursor
+ * @returns {Number} Index of edge, or -1 if no edge present
+ */
 function edgeUnderMouse(x, y) {
     for (var i=edges.length-1; i >=0; i--) {
         var edge = edges[i];
@@ -729,6 +990,13 @@ function edgeUnderMouse(x, y) {
     return -1;
 }
 
+/**
+ * Return index of node at the cursor's position
+ *  (or -1 if cursor isn't hovering over any node)
+ * @param {Number} x x-position of cursor
+ * @param {Number} y y-position of cursor
+ * @returns {Number} Index of node, or -1 if no node present
+ */
 function nodeUnderMouse(x, y) {
     for (var i=nodes.length-1; i >= 0; i--) {
         var node = nodes[i];
@@ -742,6 +1010,16 @@ function nodeUnderMouse(x, y) {
     return -1 // indicates no node under mouse
 }
 
+/**
+ * Calculate offset of mouse coordinates from the position of the canvas
+ * @param {MouseEvent} event Event when mouse interacts with HTML document
+ * @returns {
+ *  Array<{
+ *      x: Number,
+ *      y: Number
+ *  }>
+ * } Coordinates of mouse with respect to canvas position
+ */
 function coordinates(event) {
     var dimensions = canvas.getBoundingClientRect();
     // Account for canvas offset by subtracting its top most- and left most-position in window
@@ -751,9 +1029,13 @@ function coordinates(event) {
     }
 }
 
-function updateCanvas(eventType) {
+/**
+ * Draws edges and nodes to the canvas
+ * @param {Boolean} mouseDown Indicates if the mouse is pressed down
+ */
+function updateCanvas(mouseDown) {
     // Only update canvas if user is dragging state, pressing key, or clicking mouse
-    if (state && (state.dragging || eventType == "down")) {
+    if (state && (state.dragging || mouseDown)) {
         ctx.clearRect(0, 0, canvas.width, canvas.height); // clear canvas
 
         // Draw edges
@@ -788,31 +1070,31 @@ var fromY = 0;
 // const nfa = regular_expression.nfa;
 // console.log(nfa.table);
 
-const nfaAA = {};
+// const nfaAA = {};
 
-nfaAA[0] = {};
-nfaAA[0]['a'] = [1];
-nfaAA[1] = {};
-nfaAA[1]['a'] = [2];
-nfaAA[2] = {};
+// nfaAA[0] = {};
+// nfaAA[0]['a'] = [1];
+// nfaAA[1] = {};
+// nfaAA[1]['a'] = [2];
+// nfaAA[2] = {};
 
-startSid = 0;
-const user = subsetConstruct(nfaAA, [2], 0);
+// startSid = 0;
+// const user = subsetConstruct(nfaAA, [2], 0);
 
-const nfaAB = {};
+// const nfaAB = {};
 
-nfaAB[0] = {};
-nfaAB[0]['a'] = [1];
-nfaAB[1] = {};
-nfaAB[1]['b'] = [2];
-nfaAB[2] = {};
+// nfaAB[0] = {};
+// nfaAB[0]['a'] = [1];
+// nfaAB[1] = {};
+// nfaAB[1]['b'] = [2];
+// nfaAB[2] = {};
 
-const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
+// const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
 
-// console.log(user);
-// console.log(regex);
+// // console.log(user);
+// // console.log(regex);
 
-console.log(isomorphic(user, regex));
+// console.log(isomorphic(user, regex));
 
 // const nfa = {};
 
@@ -888,7 +1170,7 @@ window.addEventListener("keydown",
             }
         }
 
-        updateCanvas("down");
+        updateCanvas(true);
     }
 );
 
@@ -945,7 +1227,7 @@ canvas.addEventListener("dblclick",
                 sid++;
             }
         }
-        updateCanvas("down");
+        updateCanvas(true);
     }
 );
 
@@ -1012,7 +1294,7 @@ canvas.addEventListener("mousedown",
             highTid = edge.id;
             highSid = -1;
         }
-        updateCanvas("down");
+        updateCanvas(true);
     }
 );
 
@@ -1040,7 +1322,7 @@ canvas.addEventListener("mousemove",
             if (state.dragging) { // the state is being dragged
                 state.x += dx;
                 state.y += dy;
-                updateCanvas("move"); // only update if dragging node
+                updateCanvas(false); // only update if dragging node
             }
         }
     }
