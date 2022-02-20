@@ -2,6 +2,8 @@ let RADIUS = 40;        // state radius
 let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10;    // padding either side of transitions for easier selection
 let FONTSIZE = 16;      // font size for labels
+let EPSILON = String.fromCharCode(949); // epsilon symbol
+let SIGMA = ['a','b',EPSILON]; // fsm alphabet
 const nodes = [];       // array of states
 var edges = [];         // array of transitions
 var sid = 0;            // unique state ID
@@ -10,6 +12,162 @@ var highSid = -1;       // ID of highlighted state
 var highTid = -1;       // ID of highlighted transition
 var startSid = -1;      // ID of start state
 var startTid = -1;      // ID of start transition
+
+class Regex {
+
+    constructor(n, sigma, probOr, probKleene, probEmpty) {
+        this.postfix = "";
+        this.regex = this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+        this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
+    }
+
+    #regexToNfa(regex) {
+        const nfa = [];
+        const s = [];
+        var start = 0;
+        var end = 1;
+        var count = 0;
+        var c1 = 0;
+        var c2 = 0;
+
+        for (var i=0; i<regex.length; i++) {
+            if (regex[i] == '*') {
+                var top = s.pop();
+                var r1 = top[0];
+                var r2 = top[1];
+                c1 = count++;
+                c2 = count++;
+                s.push([c1, c2]);
+                nfa.push({});
+                nfa.push({});
+                if (!(nfa[r2][EPSILON])) {
+                    nfa[r2][EPSILON] = [];
+                }
+                nfa[r2][EPSILON].push(r1, c2);
+                nfa[c1][EPSILON] = [r1, c2];
+                if (start == r1) {
+                    start = c1;
+                }
+                if (end == r2) {
+                    end = c2;
+                }
+            } else if (regex[i] == '.') {
+                var top1 = s.pop();
+                var top2 = s.pop();
+                var r11 = top1[0];
+                var r12 = top1[1];
+                var r21 = top2[0];
+                var r22 = top2[1];
+                s.push([r21, r12]);
+                if (!(nfa[r22][EPSILON])) {
+                    nfa[r22][EPSILON] = [];
+                }
+                nfa[r22][EPSILON].push(r11);
+                if (start == r11) {
+                    start = r21;
+                }
+                if (end == r22) {
+                    end = r12;
+                }
+            } else if (regex[i] == '+') {
+                c1 = count++;
+                c2 = count++;
+                nfa.push({});
+                nfa.push({});
+                var top1 = s.pop();
+                var top2 = s.pop();
+                var r11 = top1[0];
+                var r12 = top1[1];
+                var r21 = top2[0];
+                var r22 = top2[1];
+                s.push([c1,c2]);
+                nfa[c1][EPSILON] = [r21, r11];
+                if (!(nfa[r12][EPSILON])) {
+                    nfa[r12][EPSILON] = [];
+                }
+                nfa[r12][EPSILON].push(c2);
+                if (!(nfa[r22][EPSILON])) {
+                    nfa[r22][EPSILON] = [];
+                }
+                nfa[r22][EPSILON].push(c2);
+                if (start == r11 || start == r21) {
+                    start = c1;
+                }
+                if (end == r22 || end == r12) {
+                    end = c2;
+                }
+            } else {
+                c1 = count++;
+                c2 = count++;
+                nfa.push({});
+                nfa.push({});
+                s.push([c1,c2]);
+                nfa[c1][regex[i]] = [c2];
+            }
+        }
+
+        return {
+            "table" : nfa,
+            "start" : start,
+            "end" : end
+        }
+    }
+
+    #kleene(n, sigma, probOr, probKleene, probEmpty) {
+        var expr = this.#expression(n, sigma, probOr, probKleene, probEmpty);
+        if (Math.random() <= probKleene) {
+            if (expr.length > 1) {
+                expr = "(" + expr + ")*";
+            } else {
+                expr = expr + "*";
+            }
+            this.postfix += "*";
+        }
+        return expr;
+    }
+
+    #expression(n, sigma, probOr, probKleene, probEmpty) {
+        // if (n == 0) {
+        //     return EPSILON;
+        // } else if (n == 1) {
+        if (n < 2) {
+            var symbol = sigma[Math.floor(Math.random() * sigma.length)];
+            this.postfix += symbol;
+            return symbol;
+        } else if (Math.random() <= probEmpty) {
+            this.postfix += EPSILON;
+            var after = this.#kleene(n-1, sigma, probOr, probKleene, probEmpty);
+            this.postfix += "+";
+            return "(" + EPSILON + " + " + after + ")";
+        }
+
+        // var beforeSize = Math.floor(Math.random() * n);
+        var beforeSize = Math.floor(n/2);
+
+        // console.log(beforeSize, n-beforeSize);
+
+        var before = this.#kleene(beforeSize, sigma, probOr, probKleene, probEmpty);
+        var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
+
+        if (Math.random() <= probOr) {
+            // if (before == after) {
+            //     return before;
+            // }
+            this.postfix += "+";
+            return "(" + before + " + " + after + ")";
+        }
+
+        // console.log(before, after);
+        // if (before == EPSILON) {
+        //     return after;
+        // } else if (after == EPSILON) {
+        //     return before;
+        // }
+        this.postfix += ".";
+        return before + after;
+    }
+
+}
 
 class Edge {
 
@@ -192,13 +350,6 @@ class Edge {
 
             // Draw chevron at end of edge
             drawChevron(toX, toY, this.angle, Math.PI/6);
-            // ctx.beginPath();
-            // ctx.moveTo(toX, toY);
-            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle-Math.PI/6), toY-CHEVRON*Math.sin(this.angle-Math.PI/6));
-            // ctx.lineTo(toX-CHEVRON*Math.cos(this.angle+Math.PI/6), toY-CHEVRON*Math.sin(this.angle+Math.PI/6));
-            // ctx.closePath();
-            // ctx.stroke();
-            // ctx.fill();
 
             ctx.strokeStyle = "#000000"; // revert colour to black
             ctx.fillStyle = "#fcfcfc";
@@ -267,6 +418,244 @@ class Node {
     }
 }
 
+function isomorphic(user, regex) {
+    // console.log(user.dfa);
+    // console.log(regex.dfa);
+
+    const symbols = ['a', 'b'];
+    const accept  = user.accept.concat(regex.accept);
+    const parent = {};
+    const rank = {};
+    const pairStack = [];
+
+    for (var s of Object.keys(user.dfa)) {
+        makeSet(parseInt(s), parent, rank);
+    }
+    for (var s of Object.keys(regex.dfa)) {
+        makeSet(parseInt(s), parent, rank);
+    }
+
+    var equal = true;
+
+    equal = unionCheck(user.start, regex.start, parent, rank, accept);
+
+    pairStack.push([user.start, regex.start]);
+
+    while (pairStack.length > 0 && equal) {
+        pair = pairStack.pop();
+        for (var c of symbols) {
+            // console.log(parent[user.dfa[pair[0]][c]]);
+            var r1 = findSet(user.dfa[pair[0]][c], parent);
+            var r2 = findSet(regex.dfa[pair[1]][c], parent);
+            if (r1 != r2) {
+                equal = unionCheck(r1, r2, parent, rank, accept);
+                pairStack.push([r1, r2]);
+            }
+        }
+    }
+
+    return equal;
+}
+
+function makeSet(x, parent, rank) {
+    parent[x] = x;
+    rank[x] = 0;
+}
+
+function unionCheck(x, y, parent, rank, accept) {
+    var a = findSet(x, parent);
+    var b = findSet(y, parent);
+    if (accept.includes(a)) {
+        if (!accept.includes(b)) {
+            return false;
+        }
+    } else {
+        if (accept.includes(b)) {
+            return false;
+        }
+    }
+    link(a, b, parent, rank);
+    return true;
+}
+
+function link(x, y, parent, rank) {
+    if (rank[x] > rank[y]) {
+        parent[y] = x;
+    } else {
+        parent[x] = y;
+        if (rank[x] == rank[y]) {
+            rank[y] += 1;
+        }
+    }
+}
+
+function findSet(x, parent) {
+    if (x != parent[x]) {
+        parent[x] = findSet(parent[x], parent);
+    }
+    return parent[x];
+}
+
+function subsetConstruct(nfa, final, dfaId) {
+    const symbols = ['a', 'b'];
+
+    const accept = [];
+    var start = dfaId;
+
+    const dfa = {};
+    const dfaIds = {};
+
+    const nodeClosure = [];
+    for (const [n, t] of Object.entries(nfa)) {
+        nodeClosure[n] = [];
+    }
+
+    var firstState = eClose([startSid], nodeClosure, nfa);
+    dfa[dfaId] = {};
+    dfaIds[firstState] = dfaId++;
+    for (var n of firstState) {
+        if (final.includes(n)) {
+            accept.push(dfaIds[firstState]);
+            break;
+        }
+    }
+
+    const nodeQueue = [firstState];
+    
+    while (nodeQueue.length > 0) {
+        var currentState = nodeQueue.shift();
+        for (var s of symbols) {
+            var subset = nodeSubset(currentState, s, nodeClosure, nfa).sort();
+            if (!(subset in dfaIds)) {
+                dfa[dfaId] = {};
+                dfaIds[subset] = dfaId++;
+                for (var n of subset) {
+                    if (final.includes(n)) {
+                        accept.push(dfaIds[subset]);
+                        break;
+                    }
+                }
+                nodeQueue.push(subset);
+            }
+            dfa[dfaIds[currentState]][s] = dfaIds[subset];
+        }
+    }
+
+    return {
+        dfa : dfa,
+        accept : accept,
+        start : start
+    }
+}
+
+function nodeSubset(states, symbol, nodeClosure, nfa) {
+    var subset = new Set();
+    for (var s of states) {
+        for (var t in nfa[s]) {
+            if (t == symbol) {
+                for (var n of nfa[s][t]) {
+                    subset.add(n);
+                }
+            }
+        }
+    }
+    var nodeIds  = [];
+    for (var n of subset.values()) {
+        nodeIds.push(n);
+    }
+    return eClose(nodeIds, nodeClosure, nfa);
+}
+
+function eClose(states, nodeClosure, nfa) {
+    var closed = new Set();
+    for (var n of states) {
+        if (nodeClosure[n].length == 0) {
+            var nClosed = new Set();
+            var eStates = close(n, nodeClosure, nClosed, nfa);
+            for (var q of eStates) {
+                nodeClosure[n].push(q);
+            }
+        }
+        for (var q of nodeClosure[n]) {
+            closed.add(q);
+        }
+    }
+    const values = [];
+    for (var v of closed.values()) {
+        values.push(v);
+    }
+    return values;
+}
+
+function close(k, nodeClosure, nClosed, nfa) {
+    if (nodeClosure[k].length == 0) { // if E-CLOSE(k) not yet calculated
+        nClosed.add(k);
+        if (nfa[k].length != 0 && EPSILON in nfa[k]) { // if state k has epsilon transitions
+            for (var q of nfa[k][EPSILON]) { // for each state immediately reachable via epsilon transitions from state k
+                if (!nClosed.has(q)) { // if state q not in E-CLOSE(n)
+                    for (var p of close(q, nodeClosure, nClosed, nfa)) { // add each state from E-CLOSE(q) to E-CLOSE(n)
+                        nClosed.add(p);
+                    }
+                }
+            }
+        }
+    } else { // if E-CLOSE(k) already calculated
+        for (var q of nodeClosure[k]) { // add each state from E-CLOSE(k) to E-CLOSE(n)
+            nClosed.add(q);
+        }
+    }
+    return nClosed.values();
+}
+
+function getSymbols(label) {
+    var s = new Set();
+    var symbols = ['a', 'b', EPSILON];
+    for (var char of label) {
+        if (symbols.includes(char)) {
+            s.add(char);
+        }
+    }
+    return s.values();
+}
+
+function transTable() {
+    var nfa = {};
+    var final = [];
+    for (var n of nodes) {
+        nfa[n.id] = {};
+        for (var s of SIGMA) {
+            nfa[n.id][s] = [];
+        }
+        if (n.accept) {
+            final.push(n.id);
+        }
+    }
+    for (var e of edges) {
+        var symbols = getSymbols(e.label);
+        for (var s of symbols) {
+            nfa[e.fromNode.id][s].push(e.toNode.id);
+        }
+    }
+
+    // var nodeClosure = [];
+    // var nodeIds = [];
+    // for (var n of nodes) {
+    //     nodeClosure[n.id] = [];
+    //     nodeIds.push(n.id);
+    // }
+
+    // console.log(nodeSubset([0,1], 'a', nodeClosure, nfa));
+
+    // var s = eClose(nodeIds, nodeClosure, nfa);
+
+    // console.log(nodeClosure);
+
+    return {
+        table : nfa,
+        accept : final
+    }
+}
+
 function drawChevron(x, y, angleEdge, angleHead) {
 
     // ctx.beginPath();
@@ -299,7 +688,7 @@ function circleFromPoints(x1, y1, x2, y2, x3, y3) {
         'x' : x,
         'y' : y,
         'radius' : Math.hypot(x-x1, y-y1)
-    };
+    }
 }
 
 function getFromId(id, arr) {
@@ -386,12 +775,60 @@ function updateCanvas(eventType) {
 }
 
 var canvas = document.getElementById('flat-canvas');
+// var regex = document.getElementById('regex-generator');
 var ctx = canvas.getContext('2d');
 ctx.fillStyle = "#fcfcfc";
 ctx.textAlign = "center";
 ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
+
+// const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
+// console.log(regular_expression.regex);
+// const nfa = regular_expression.nfa;
+// console.log(nfa.table);
+
+const nfaAA = {};
+
+nfaAA[0] = {};
+nfaAA[0]['a'] = [1];
+nfaAA[1] = {};
+nfaAA[1]['a'] = [2];
+nfaAA[2] = {};
+
+startSid = 0;
+const user = subsetConstruct(nfaAA, [2], 0);
+
+const nfaAB = {};
+
+nfaAB[0] = {};
+nfaAB[0]['a'] = [1];
+nfaAB[1] = {};
+nfaAB[1]['b'] = [2];
+nfaAB[2] = {};
+
+const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
+
+// console.log(user);
+// console.log(regex);
+
+console.log(isomorphic(user, regex));
+
+// const nfa = {};
+
+// nfa[0] = {};
+// nfa[0][EPSILON] = [1];
+// nfa[0]['a'] = [2];
+
+// nfa[1] = {};
+// nfa[1]['a'] = [0];
+
+// nfa[2] = {};
+// nfa[2]['a'] = [1];
+// nfa[2]['b'] = [1,2];
+
+// startSid = 0;
+// console.log(subsetConstruct(nfa, [1], 0));
 
 // way to do it without?
 var state = null;
@@ -412,7 +849,7 @@ window.addEventListener("keydown",
         if (addLabel != null && event.key.length == 1) {
             var length = addLabel.label.length;
             if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
-                addLabel.label = addLabel.label.slice(0,-1) + String.fromCharCode(949);
+                addLabel.label = addLabel.label.slice(0,-1) + EPSILON;
             } else {
                 addLabel.label += event.key;
             }
