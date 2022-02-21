@@ -3,7 +3,7 @@ let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10;    // padding either side of transitions for easier selection
 let FONTSIZE = 16;      // font size for labels
 let EPSILON = String.fromCharCode(949); // epsilon symbol
-let SIGMA = ['a','b',EPSILON]; // fsm alphabet
+let SIGMA = ['a','b'];  // fsm alphabet
 const nodes = [];       // array of states
 var edges = [];         // array of transitions
 var sid = 0;            // unique state ID
@@ -515,7 +515,6 @@ class Node {
  * @returns {Boolean} True iff user DFA and regex DFA accept the same language
  */
 function isomorphic(user, regex) {
-    const symbols = ['a', 'b'];
     // Array of all accept states (state IDs are unique across both DFAs)
     const accept  = user.accept.concat(regex.accept);
     // Each state has a set represented by a tree: 'parent' represents the root
@@ -548,7 +547,7 @@ function isomorphic(user, regex) {
         // Pop next pair of states
         pair = pairStack.pop();
         // For each symbol in the alphabet
-        for (var c of symbols) {
+        for (var c of SIGMA) {
             // Take transition via 'c' for each DFA and determine which set they belong to
             //  (i.e., the root of the tree they're in)
             var r1 = findSet(user.dfa[pair[0]][c], parent);
@@ -589,8 +588,11 @@ function makeSet(x, parent, rank) {
  *  only accepting states, or only non-accepting states
  */
 function unionCheck(x, y, parent, rank, accept) {
+    // Get root nodes for each state
     var a = findSet(x, parent);
     var b = findSet(y, parent);
+    // Return false if the union of sets contains both a non-accepting
+    //  and accepting state
     if (accept.includes(a)) {
         if (!accept.includes(b)) {
             return false;
@@ -600,6 +602,8 @@ function unionCheck(x, y, parent, rank, accept) {
             return false;
         }
     }
+    // If the union contains either only accepting states, or only
+    //  non-accepting states, link them and return true
     link(a, b, parent, rank);
     return true;
 }
@@ -612,6 +616,7 @@ function unionCheck(x, y, parent, rank, accept) {
  * @param {Array<Number>} rank Array of rank for each node
  */
 function link(x, y, parent, rank) {
+    // Set higher ranked state as root node of lower ranked state
     if (rank[x] > rank[y]) {
         parent[y] = x;
     } else {
@@ -630,6 +635,7 @@ function link(x, y, parent, rank) {
  */
 function findSet(x, parent) {
     if (x != parent[x]) {
+        // Recursively find parent of x until root is reached
         parent[x] = findSet(parent[x], parent);
     }
     return parent[x];
@@ -660,22 +666,29 @@ function findSet(x, parent) {
  * } State transition table, start state, and accept states defined for the resulting DFA
  */
 function subsetConstruct(nfa, final, dfaId) {
-    const symbols = ['a', 'b'];
-
+    // Accept states of DFA
     const accept = [];
+    // ID of initial DFA state
     var start = dfaId;
 
+    // State transition table
     const dfa = {};
+    // Mapping of state subsets in NFA to state IDs in DFA
     const dfaIds = {};
 
+    // Contains E-CLOSE for each state
     const nodeClosure = [];
     for (const [n, t] of Object.entries(nfa)) {
         nodeClosure[n] = [];
     }
 
+    // First state of DFA by performing E-CLOSE on start state of NFA
     var firstState = eClose([startSid], nodeClosure, nfa);
+    // Add new state to DFA
     dfa[dfaId] = {};
+    // Map subset given by E-CLOSE to corresponding DFA state ID
     dfaIds[firstState] = dfaId++;
+    // DFA state is accepting if corresponding state subset contains accepting state
     for (var n of firstState) {
         if (final.includes(n)) {
             accept.push(dfaIds[firstState]);
@@ -683,23 +696,34 @@ function subsetConstruct(nfa, final, dfaId) {
         }
     }
 
+    // Initialise a queue of state subsets to process
     const nodeQueue = [firstState];
     
     while (nodeQueue.length > 0) {
+        // Dequeue next state subset
         var currentState = nodeQueue.shift();
-        for (var s of symbols) {
+        // For each symbol of the alphabet
+        for (var s of SIGMA) {
+            // State subset calculated by reading 's' from each node in current subset
+            //  and applying E-CLOSE to the result
             var subset = nodeSubset(currentState, s, nodeClosure, nfa).sort();
+            // If result is a new subset of states
             if (!(subset in dfaIds)) {
+                // Add new state to DFA
                 dfa[dfaId] = {};
+                // Map subset to corresponding DFA state ID
                 dfaIds[subset] = dfaId++;
+                // DFA state is accepting if corresponding state subset contains accepting state
                 for (var n of subset) {
                     if (final.includes(n)) {
                         accept.push(dfaIds[subset]);
                         break;
                     }
                 }
+                // Queue new subset for processing
                 nodeQueue.push(subset);
             }
+            // Add transition between the state subsets
             dfa[dfaIds[currentState]][s] = dfaIds[subset];
         }
     }
@@ -728,9 +752,13 @@ function subsetConstruct(nfa, final, dfaId) {
  */
 function nodeSubset(states, symbol, nodeClosure, nfa) {
     var subset = new Set();
+    // For each state in subset of states in NFA
     for (var s of states) {
+        // For each transition outgoing from state
         for (var t in nfa[s]) {
+            // If transition symbols match
             if (t == symbol) {
+                // Add each state reached by reading symbol
                 for (var n of nfa[s][t]) {
                     subset.add(n);
                 }
@@ -741,6 +769,7 @@ function nodeSubset(states, symbol, nodeClosure, nfa) {
     for (var n of subset.values()) {
         nodeIds.push(n);
     }
+    // Return E-CLOSE of result
     return eClose(nodeIds, nodeClosure, nfa);
 }
 
@@ -759,14 +788,18 @@ function nodeSubset(states, symbol, nodeClosure, nfa) {
  */
 function eClose(states, nodeClosure, nfa) {
     var closed = new Set();
+    // For each state in subset of states
     for (var n of states) {
+        // If closure for given state not yet calculated
         if (nodeClosure[n].length == 0) {
             var nClosed = new Set();
+            // Calculate E-CLOSE for state
             var eStates = close(n, nodeClosure, nClosed, nfa);
             for (var q of eStates) {
                 nodeClosure[n].push(q);
             }
         }
+        // Add each state in closure of given state
         for (var q of nodeClosure[n]) {
             closed.add(q);
         }
@@ -793,19 +826,25 @@ function eClose(states, nodeClosure, nfa) {
  * @returns {IterableIterator<Number>} States reached through E-CLOSE(k)
  */
 function close(k, nodeClosure, nClosed, nfa) {
-    if (nodeClosure[k].length == 0) { // if E-CLOSE(k) not yet calculated
+    // If E-CLOSE(k) not yet calculated
+    if (nodeClosure[k].length == 0) {
         nClosed.add(k);
-        if (nfa[k].length != 0 && EPSILON in nfa[k]) { // if state k has epsilon transitions
-            for (var q of nfa[k][EPSILON]) { // for each state immediately reachable via epsilon transitions from state k
-                if (!nClosed.has(q)) { // if state q not in E-CLOSE(n)
-                    for (var p of close(q, nodeClosure, nClosed, nfa)) { // add each state from E-CLOSE(q) to E-CLOSE(n)
+        // If state k has epsilon transitions
+        if (nfa[k].length != 0 && EPSILON in nfa[k]) {
+            // For each state immediately reachable via epsilon transitions from state k
+            for (var q of nfa[k][EPSILON]) {
+                // If state q not in E-CLOSE(n)
+                if (!nClosed.has(q)) { 
+                    // Add each state from E-CLOSE(q) to E-CLOSE(n)
+                    for (var p of close(q, nodeClosure, nClosed, nfa)) { 
                         nClosed.add(p);
                     }
                 }
             }
         }
     } else { // if E-CLOSE(k) already calculated
-        for (var q of nodeClosure[k]) { // add each state from E-CLOSE(k) to E-CLOSE(n)
+        // Add each state from E-CLOSE(k) to E-CLOSE(n)
+        for (var q of nodeClosure[k]) { 
             nClosed.add(q);
         }
     }
@@ -819,9 +858,15 @@ function close(k, nodeClosure, nClosed, nfa) {
  */
 function getSymbols(label) {
     var s = new Set();
-    var symbols = ['a', 'b', EPSILON];
+    // Alphabet of NFA
+    const alphabet = [];
+    for (var c of SIGMA) {
+        alphabet.push(c);
+    }
+    alphabet.push(EPSILON);
+    // If any character of label is in alphabet, add to 's'
     for (var char of label) {
-        if (symbols.includes(char)) {
+        if (alphabet.includes(char)) {
             s.add(char);
         }
     }
@@ -844,19 +889,34 @@ function getSymbols(label) {
  * } State transition table and accept states
  */
 function transTable() {
-    var nfa = {};
-    var final = [];
+    // State transition table
+    const nfa = {};
+    // Accept states
+    const final = [];
+    // Alphabet of NFA
+    const alphabet = [];
+    for (var c of SIGMA) {
+        alphabet.push(c);
+    }
+    alphabet.push(EPSILON);
+    // For each state in user NFA
     for (var n of nodes) {
+        // Add state to state transition table
         nfa[n.id] = {};
-        for (var s of SIGMA) {
+        // Initialise transitions
+        for (var s of alphabet) {
             nfa[n.id][s] = [];
         }
+        // Add to array of accept states if applicable
         if (n.accept) {
             final.push(n.id);
         }
     }
+    // For each transition in user NFA
     for (var e of edges) {
+        // Get valid characters from label
         var symbols = getSymbols(e.label);
+        // Add each transition to state transition table
         for (var s of symbols) {
             nfa[e.fromNode.id][s].push(e.toNode.id);
         }
@@ -961,32 +1021,38 @@ function getFromId(id, arr) {
  * @returns {Number} Index of edge, or -1 if no edge present
  */
 function edgeUnderMouse(x, y) {
+    // For each edge
     for (var i=edges.length-1; i >=0; i--) {
         var edge = edges[i];
-        if (edge.id != startTid) {
-            if (edge.fromNode == edge.toNode) {
+        if (edge.id != startTid) { // ignore start edge
+            if (edge.fromNode == edge.toNode) { // self-loop
                 var dx = edge.x-x;
                 var dy = edge.y-y;
+                // If cursor contained within area of self-loop
                 if (dx*dx+dy*dy < (edge.radius+SELECTAREA)*(edge.radius+SELECTAREA)) {
                     return i;
                 }
-            } else {
+            } else { // normal transition
                 var dx = edge.toNode.x - edge.fromNode.x;
                 var dy = edge.toNode.y - edge.fromNode.y;
                 var len = Math.sqrt(dx*dx+dy*dy);
-                if (edge.curved) {
+                if (edge.curved) { // curved transition
+                    // Shifts selection window accordingly
                     var perc = (dx*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle))+dy*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle)))/(len*len);
                     var dist = (dx*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle))-dy*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle)))/len;
-                } else {
+                } else { // straight transition
+                    // Regular selection window for transition
                     var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
                     var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
                 }
+                // If cursor within selection area
                 if (perc > 0 && perc < 1 && Math.abs(dist) < SELECTAREA) {
                     return i;
                 }
             }
         }
     }
+    // If no edge is under cursor
     return -1;
 }
 
@@ -1115,31 +1181,40 @@ var fromY = 0;
 // way to do it without?
 var state = null;
 
+/**
+ * Pressing a key
+ */
 window.addEventListener("keydown",
     function(event){
 
+        // State/Edge to add label to
         var addLabel = null;
 
-        if (highSid != -1) {
+        if (highSid != -1) { // state highlighted
             index = getFromId(highSid, nodes);
             addLabel = nodes[index];
-        } else if (highTid != -1) {
+        } else if (highTid != -1) { // edge highlighted
             index = getFromId(highTid, edges);
             addLabel = edges[index];
         }
 
+        // If State/Edge highlighted and character entered
         if (addLabel != null && event.key.length == 1) {
+            // Length of current label
             var length = addLabel.label.length;
+            // Convert '\e' into EPSILON if read, else add character
             if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
                 addLabel.label = addLabel.label.slice(0,-1) + EPSILON;
             } else {
                 addLabel.label += event.key;
             }
-        } else if (event.key == "Backspace") {
+        } else if (event.key == "Backspace") { // delete last character
             addLabel.label = addLabel.label.slice(0,-1);
-        } else if (event.key == "Delete") {
-            if (highSid != -1) {
+        } else if (event.key == "Delete") { // delete highlighted State/Edge
+            if (highSid != -1) { // state selected
+                // Create new edge set
                 var new_edges = [];
+                // Only include edges not adjacent to selected node
                 for (var i=0; i<edges.length; i++) {
                     if (edges[i].fromNode == nodes[index] || edges[i].toNode == nodes[index]) {
                         if (edges[i].id == startTid) {
@@ -1153,13 +1228,15 @@ window.addEventListener("keydown",
                 if (nodes[index].id == startSid) {
                     startSid = -1;
                 }
+                // Remove state
                 nodes.splice(index,1);
                 highSid = -1;
-            } else if (highTid != -1) {
+            } else if (highTid != -1) { // edge selected
                 if (edges[index].id == startTid) {
                     startTid = -1;
                 }
                 for (var i=0; i<edges.length; i++) {
+                    // If selected edge curved, remove curved property of other curved edge
                     if (edges[i].fromNode == edges[index].toNode && edges[i].toNode == edges[index].fromNode) {
                         edges[i].curved = false;
                         break;
@@ -1174,29 +1251,39 @@ window.addEventListener("keydown",
     }
 );
 
+/**
+ * Double-clicking on the canvas
+ */
 canvas.addEventListener("dblclick",
     function(event) {
 
-        var coords = coordinates(event); // get mouse coordinates
+        // Get mouse coordinates
+        var coords = coordinates(event);
+        // x- and y-coordinates of mouse
         var x = coords.x;
         var y = coords.y;
+        // Get State/Edge under mouse
         var stateIndex = nodeUnderMouse(x, y);
         var edgeIndex = edgeUnderMouse(x, y);
 
         if (stateIndex != -1) { // node selected
+            // Toggle accept state
             nodes[stateIndex].accept = !nodes[stateIndex].accept;
         } else if (edgeIndex == -1) { // empty space on canvas selected
             if (event.shiftKey) { // shift held
-                if (highSid != -1) {
+                if (highSid != -1) { // state highlighted
+                    // Create new node
                     var n = new Node(sid, x, y);
                     state = n;
                     nodes.push(n);
+                    // Add edge between highlighted state and new state
                     var e = new Edge(tid, nodes[getFromId(highSid, nodes)], n);
                     sid++;
                     edges.push(e);
                     tid++;
                 }
             } else if (event.ctrlKey) { // ctrl held
+                // Create new node
                 var n = new Node(sid, x, y);
                 state = n;
                 nodes.push(n);
@@ -1204,13 +1291,14 @@ canvas.addEventListener("dblclick",
                 highTid = -1;
                 startSid = sid;
                 sid++;
+                // Create start edge if it doesn't exist, and point it to new node
                 if (startTid == -1) {
                     var e = new Edge(tid, null, n);
                     edges.push(e);
                     startTid = tid;
                     tid++;
                 } else {
-                    // Set start edge to point at this node
+                    // Set existing start edge to point at this node
                     for (var i=0; i<edges.length; i++) {
                         if (edges[i].id == startTid) {
                             edges[i].toNode = nodes[getFromId(highSid, nodes)];
@@ -1218,7 +1306,8 @@ canvas.addEventListener("dblclick",
                         }
                     }
                 }
-            } else {
+            } else { // no extra key held
+                // Create new node and highlight it
                 var n = new Node(sid, x, y);
                 state = n;
                 nodes.push(n);
@@ -1231,12 +1320,18 @@ canvas.addEventListener("dblclick",
     }
 );
 
+/**
+ * Mouse clicked
+ */
 canvas.addEventListener("mousedown",
     function(event) {
 
-        var coords = coordinates(event); // get mouse coordinates
+        // Get mouse coordinates
+        var coords = coordinates(event);
+        // x- and y-coordinates of mouse
         var x = coords.x;
         var y = coords.y;
+        // Get State/Edge under mouse
         var stateIndex = nodeUnderMouse(x, y);
         var edgeIndex = edgeUnderMouse(x, y);
 
@@ -1247,15 +1342,18 @@ canvas.addEventListener("mousedown",
                     var create = true;
                     var curve = false;
                     for (var i=0; i<edges.length; i++) {
-                        if (create && edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) { // if edge already exists
+                        // If edge already exists between nodes, do not create a new one
+                        if (create && edges[i].fromNode == from && edges[i].toNode == nodes[stateIndex]) {
                             create = false;
                         }
-                        if (!curve && edges[i].fromNode == nodes[stateIndex] && edges[i].toNode == from) { // if reversed edge exists
+                        // If reversed edge exists, curve both
+                        if (!curve && edges[i].fromNode == nodes[stateIndex] && edges[i].toNode == from) {
                             curve = true;
                             edges[i].curved = true;
                         }
                     }
                     if (create) {
+                        // Add new edge between nodes
                         var e = new Edge(tid, nodes[getFromId(highSid, nodes)], nodes[stateIndex]);
                         edges.push(e);
                         tid++;
@@ -1269,6 +1367,7 @@ canvas.addEventListener("mousedown",
                 startSid = highSid; // set highlighted state as start state
 
                 if (startTid == -1) {
+                    // Create start edge if it doesn't exist, and point it to node
                     var e = new Edge(tid, null, state);
                     edges.push(e);
                     startTid = tid;
@@ -1282,7 +1381,8 @@ canvas.addEventListener("mousedown",
                         }
                     }
                 }
-            } else {
+            } else { // no extra key held
+                // User drags node
                 state = nodes[stateIndex];
                 state.dragging = true;
                 highSid = state.id;
@@ -1290,6 +1390,7 @@ canvas.addEventListener("mousedown",
                 canvas.style.cursor = "move";
             }
         } else if (edgeIndex != -1) { // edge selected
+            // Highlight edge
             var edge = edges[edgeIndex];
             highTid = edge.id;
             highSid = -1;
@@ -1298,6 +1399,9 @@ canvas.addEventListener("mousedown",
     }
 );
 
+/**
+ * Mouse clicked and held
+ */
 canvas.addEventListener("mousemove",
     function(event) {
         var coords = coordinates(event); // get mouse coordinates
@@ -1328,11 +1432,18 @@ canvas.addEventListener("mousemove",
     }
 );
 
+/**
+ * Mouse click released
+ */
 canvas.addEventListener("mouseup",
     function(){
+        // If canvas nonempty
         if (state) {
+            // If currently dragging state
             if (state.dragging) {
+                // Stop dragging state
                 state.dragging = false;
+                // Return cursor style to pointer
                 canvas.style.cursor = "auto";
             } 
         }
