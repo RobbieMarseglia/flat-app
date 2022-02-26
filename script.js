@@ -3,7 +3,7 @@ let CHEVRON = RADIUS/4; // length of transition chevron
 let SELECTAREA = 10;    // padding either side of transitions for easier selection
 let FONTSIZE = 16;      // font size for labels
 let EPSILON = String.fromCharCode(949); // epsilon symbol
-let SIGMA = ['a','b'];  // fsm alphabet
+let SIGMA = ['a','b', 'c'];  // fsm alphabet
 let STATEFILL = "#fcfcfc" // fill colour of states
 let BLACK = "#000000"   // black hex code
 let RED = "#ff0000"     // red hex code
@@ -19,7 +19,7 @@ var startTid = -1;      // ID of start transition
 class Regex {
 
     constructor() {
-        this.generate(); 
+        this.generate();
     }
 
     /**
@@ -27,36 +27,9 @@ class Regex {
      */
     generate() {
         this.postfix = "";
-        this.regex = this.#kleene(6, 0.45, 0.2, 0.1);
+        this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
         this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
-    }
-
-    /**
-     * Return the generated regular expression
-     * @returns {String} A regular expression
-     */
-    getRegex() {
-        return this.regex;
-    }
-
-    /**
-     * Return the corresponding NFA for the generated regular expression
-     * @returns {
-     *  Array<{
-     *      table: 
-     *          Array<{
-     *              stateID: Number,
-     *              symbol: String,
-     *              stateIDs: Array<Number>
-     *          }>,
-     *      start: Number,
-     *      end: Array<Number>
-     *  }>
-     * } State transition table for NFA accepting regex
-     *  (alongside start state and accept states)
-     */
-    getNFA() {
-        return this.nfa
+        console.log(this.postfix);
     }
 
     /**
@@ -100,13 +73,16 @@ class Regex {
                 // Add new states to NFA
                 nfa.push({});
                 nfa.push({});
-                if (!(nfa[r2][EPSILON])) { // initialise epsilon transitions if undefined
-                    nfa[r2][EPSILON] = [];
+                for (var char of SIGMA) {
+                    nfa[c1][char] = [];
+                    nfa[c2][char] = [];
                 }
+                nfa[c1][EPSILON] = [];
+                nfa[c2][EPSILON] = []
                 // Loop back to start of sub-NFA or continue
                 nfa[r2][EPSILON].push(r1, c2);
                 // Go to start of sub-NFA or skip
-                nfa[c1][EPSILON] = [r1, c2];
+                nfa[c1][EPSILON].push(r1, c2);
                 // Set new start and end states if necessary
                 if (start == r1) {
                     start = c1;
@@ -124,9 +100,6 @@ class Regex {
                 var r22 = top2[1];
                 // Push 'start' of second pair and 'end' of first pair onto stack
                 s.push([r21, r12]);
-                if (!(nfa[r22][EPSILON])) { // initialise epsilon transitions if undefined
-                    nfa[r22][EPSILON] = [];
-                }
                 // Connect first sub-NFA to second with epsilon transition
                 nfa[r22][EPSILON].push(r11);
                 // Set new start and end states if necessary
@@ -142,6 +115,12 @@ class Regex {
                 c2 = count++;
                 nfa.push({});
                 nfa.push({});
+                for (var char of SIGMA) {
+                    nfa[c1][char] = [];
+                    nfa[c2][char] = [];
+                }
+                nfa[c1][EPSILON] = [];
+                nfa[c2][EPSILON] = []
                 // Pop last two pairs of states from stack (two sub-NFAs)
                 var top1 = s.pop();
                 var top2 = s.pop();
@@ -152,15 +131,9 @@ class Regex {
                 // Push new states to stack
                 s.push([c1,c2]);
                 // Traverse to second sub-NFA or first sub-NFA
-                nfa[c1][EPSILON] = [r21, r11];
-                if (!(nfa[r12][EPSILON])) { // initialise epsilon transitions if undefined
-                    nfa[r12][EPSILON] = [];
-                }
+                nfa[c1][EPSILON].push(r21, r11);
                 // Continue from end of first sub-NFA
                 nfa[r12][EPSILON].push(c2);
-                if (!(nfa[r22][EPSILON])) { // initialise epsilon transitions if undefined
-                    nfa[r22][EPSILON] = [];
-                }
                 // Continue from end of second sub-NFA
                 nfa[r22][EPSILON].push(c2);
                 // Set new start and end states if necessary
@@ -176,10 +149,16 @@ class Regex {
                 c2 = count++;
                 nfa.push({});
                 nfa.push({});
+                for (var char of SIGMA) {
+                    nfa[c1][char] = [];
+                    nfa[c2][char] = [];
+                }
+                nfa[c1][EPSILON] = [];
+                nfa[c2][EPSILON] = []
                 // Push new states onto stack
                 s.push([c1,c2]);
                 // Connect the first state to the second via the symbol
-                nfa[c1][regex[i]] = [c2];
+                nfa[c1][regex[i]].push(c2);
             }
         }
 
@@ -221,7 +200,7 @@ class Regex {
      * @param {Number} probEmpty Probability epsilon character used 
      * @returns {String} Regular expression
      */
-    #expression(n, sigma, probOr, probKleene, probEmpty) {
+    #expression(n, probOr, probKleene, probEmpty) {
         // if (n == 0) {
         //     return EPSILON;
         // } else if (n == 1) {
@@ -255,11 +234,6 @@ class Regex {
         }
 
         // Apply Concatenation operator between the two with probability 1-probOr
-        // if (before == EPSILON) {
-        //     return after;
-        // } else if (after == EPSILON) {
-        //     return before;
-        // }
         this.postfix += ".";
         return before + after;
     }
@@ -558,8 +532,13 @@ function isomorphic(user, regex) {
     const parent = {};
     // Each state also has a rank denoting their height in their tree
     const rank = {};
-    // Stack containing pairs of states, the first from 'user' and the second from 'regex'
+    // Stack containing pairs of states
     const pairStack = [];
+    // User states
+    const userStates = [];
+    for (var k of Object.keys(user.dfa)) {
+        userStates.push(parseInt(k));
+    }
 
     // Make sets for each state (represented as trees)
     for (var s of Object.keys(user.dfa)) {
@@ -586,8 +565,18 @@ function isomorphic(user, regex) {
         for (var c of SIGMA) {
             // Take transition via 'c' for each DFA and determine which set they belong to
             //  (i.e., the root of the tree they're in)
-            var r1 = findSet(user.dfa[pair[0]][c], parent);
-            var r2 = findSet(regex.dfa[pair[1]][c], parent);
+            var r1 = 0;
+            var r2 = 0;
+            if (userStates.includes(pair[0])) {
+                r1 = findSet(user.dfa[pair[0]][c], parent);
+            } else {
+                r1 = findSet(regex.dfa[pair[0]][c], parent);
+            }
+            if (userStates.includes(pair[1])) {
+                r2 = findSet(user.dfa[pair[1]][c], parent);
+            } else {
+                r2 = findSet(regex.dfa[pair[1]][c], parent);
+            }
             // If they belong to different sets
             if (r1 != r2) {
                 // Take the union of the sets
@@ -686,6 +675,7 @@ function findSet(x, parent) {
  *      stateIDs: Array<Number>
  *  }>
  * } nfa State transition table
+ * @param {Number} start NFA start state
  * @param {Array<Number>} final NFA accept states
  * @param {Number} dfaId ID of initial DFA state
  * @returns {
@@ -701,11 +691,12 @@ function findSet(x, parent) {
  *  }>
  * } State transition table, start state, and accept states defined for the resulting DFA
  */
-function subsetConstruct(nfa, final, dfaId) {
+function subsetConstruct(nfa, start, final, dfaId) {
     // Accept states of DFA
     const accept = [];
-    // ID of initial DFA state
-    var start = dfaId;
+
+    // DFA start state
+    var begin = dfaId;
 
     // State transition table
     const dfa = {};
@@ -719,7 +710,7 @@ function subsetConstruct(nfa, final, dfaId) {
     }
 
     // First state of DFA by performing E-CLOSE on start state of NFA
-    var firstState = eClose([startSid], nodeClosure, nfa);
+    var firstState = eClose([start], nodeClosure, nfa);
     // Add new state to DFA
     dfa[dfaId] = {};
     // Map subset given by E-CLOSE to corresponding DFA state ID
@@ -766,7 +757,7 @@ function subsetConstruct(nfa, final, dfaId) {
 
     return {
         dfa : dfa,
-        start : start,
+        start : begin,
         accept : accept
     }
 }
@@ -1159,15 +1150,36 @@ function updateCanvas(mouseDown) {
 }
 
 /**
+ * Returns true if regex and user's machine accept the same language
+ */
+function comp() {
+    var regNFA = regularExpression.nfa;
+    var userNFA = transTable();
+    var user = subsetConstruct(userNFA.table, startSid, userNFA.accept, 0);
+    var reg = subsetConstruct(regNFA.table, regNFA.start, [regNFA.end], Object.keys(user.dfa).length)
+    var equal = isomorphic(user, reg);
+    if (equal) {
+        answer.innerHTML = "Correct";
+        answer.style.color = "green";
+    } else {
+        answer.innerHTML = "Incorrect";
+        answer.style.color = "red";
+    }
+}
+
+/**
  * Generate new regular expression and display to user
  */
 function gen() {
     regularExpression.generate();
-    regex.innerHTML = regularExpression.getRegex();
+    regex.innerHTML = regularExpression.regex;
+    answer.innerHTML = "Draw Machine";
+    answer.style.color = "black";
 }
 
 const canvas = document.getElementById('flat-canvas');
 const regex = document.getElementById('regex');
+const answer = document.getElementById('result');
 const ctx = canvas.getContext('2d');
 ctx.fillStyle = STATEFILL;
 ctx.textAlign = "center";
@@ -1176,54 +1188,8 @@ var fromX = 0;
 var fromY = 0;
 
 const regularExpression = new Regex();
-regex.innerHTML = regularExpression.getRegex();
-
-// const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
-// console.log(regular_expression.regex);
-// const nfa = regular_expression.nfa;
-// console.log(nfa.table);
-
-// const nfaAA = {};
-
-// nfaAA[0] = {};
-// nfaAA[0]['a'] = [1];
-// nfaAA[1] = {};
-// nfaAA[1]['a'] = [2];
-// nfaAA[2] = {};
-
-// startSid = 0;
-// const user = subsetConstruct(nfaAA, [2], 0);
-
-// const nfaAB = {};
-
-// nfaAB[0] = {};
-// nfaAB[0]['a'] = [1];
-// nfaAB[1] = {};
-// nfaAB[1]['b'] = [2];
-// nfaAB[2] = {};
-
-// const regex = subsetConstruct(nfaAB, [2], Object.keys(user.dfa).length);
-
-// // console.log(user);
-// // console.log(regex);
-
-// console.log(isomorphic(user, regex));
-
-// const nfa = {};
-
-// nfa[0] = {};
-// nfa[0][EPSILON] = [1];
-// nfa[0]['a'] = [2];
-
-// nfa[1] = {};
-// nfa[1]['a'] = [0];
-
-// nfa[2] = {};
-// nfa[2]['a'] = [1];
-// nfa[2]['b'] = [1,2];
-
-// startSid = 0;
-// console.log(subsetConstruct(nfa, [1], 0));
+regex.innerHTML = regularExpression.regex;
+answer.innerHTML = "Draw Machine";
 
 // way to do it without?
 var state = null;
