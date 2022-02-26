@@ -4,6 +4,9 @@ let SELECTAREA = 10;    // padding either side of transitions for easier selecti
 let FONTSIZE = 16;      // font size for labels
 let EPSILON = String.fromCharCode(949); // epsilon symbol
 let SIGMA = ['a','b'];  // fsm alphabet
+let STATEFILL = "#fcfcfc" // fill colour of states
+let BLACK = "#000000"   // black hex code
+let RED = "#ff0000"     // red hex code
 const nodes = [];       // array of states
 var edges = [];         // array of transitions
 var sid = 0;            // unique state ID
@@ -15,10 +18,45 @@ var startTid = -1;      // ID of start transition
 
 class Regex {
 
-    constructor(n, sigma, probOr, probKleene, probEmpty) {
+    constructor() {
+        this.generate(); 
+    }
+
+    /**
+     * Generate new regular expression and corresponding NFA
+     */
+    generate() {
         this.postfix = "";
-        this.regex = this.#kleene(n, sigma, probOr, probKleene, probEmpty);
+        this.regex = this.#kleene(6, 0.45, 0.2, 0.1);
         this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
+    }
+
+    /**
+     * Return the generated regular expression
+     * @returns {String} A regular expression
+     */
+    getRegex() {
+        return this.regex;
+    }
+
+    /**
+     * Return the corresponding NFA for the generated regular expression
+     * @returns {
+     *  Array<{
+     *      table: 
+     *          Array<{
+     *              stateID: Number,
+     *              symbol: String,
+     *              stateIDs: Array<Number>
+     *          }>,
+     *      start: Number,
+     *      end: Array<Number>
+     *  }>
+     * } State transition table for NFA accepting regex
+     *  (alongside start state and accept states)
+     */
+    getNFA() {
+        return this.nfa
     }
 
     /**
@@ -155,15 +193,14 @@ class Regex {
     /**
      * Closes expr in the Kleene star (*) operator with probability probKleene
      * @param {Number} n Number of terms in regex
-     * @param {Array<String>} sigma Alphabet of regex
      * @param {Number} probOr Probability Or (+) operator used in favour of Concatenation (.) operator
      * @param {Number} probKleene Probability Kleene star (*) used
      * @param {Number} probEmpty Probability epsilon character used
      * @returns {String} Regular expression
      */
-    #kleene(n, sigma, probOr, probKleene, probEmpty) {
+    #kleene(n, probOr, probKleene, probEmpty) {
         // Generate expression
-        var expr = this.#expression(n, sigma, probOr, probKleene, probEmpty);
+        var expr = this.#expression(n, probOr, probKleene, probEmpty);
         // Apply Kleene star operator with probability probKleene
         if (Math.random() <= probKleene) {
             if (expr.length > 1) {
@@ -179,7 +216,6 @@ class Regex {
     /**
      * Constructs a regular expression with operators and symbols included probabilistically
      * @param {Number} n Number of terms in regex
-     * @param {Array<String>} sigma Alphabet of regex
      * @param {Number} probOr Probability Or (+) operator used in favour of Concatenation (.) operator
      * @param {Number} probKleene Probability Kleene star (*) used
      * @param {Number} probEmpty Probability epsilon character used 
@@ -191,13 +227,13 @@ class Regex {
         // } else if (n == 1) {
         if (n < 2) {
             // Randomly select symbol from sigma
-            var symbol = sigma[Math.floor(Math.random() * sigma.length)];
+            var symbol = SIGMA[Math.floor(Math.random() * SIGMA.length)];
             this.postfix += symbol;
             return symbol;
         } else if (Math.random() <= probEmpty) { // use epsilon with probability probEmpty
             this.postfix += EPSILON;
             // Generate smaller sub-expression
-            var after = this.#kleene(n-1, sigma, probOr, probKleene, probEmpty);
+            var after = this.#kleene(n-1, probOr, probKleene, probEmpty);
             this.postfix += "+";
             return "(" + EPSILON + " + " + after + ")";
         }
@@ -206,8 +242,8 @@ class Regex {
         var beforeSize = Math.floor(n/2);
 
         // Generate two sub-expressions
-        var before = this.#kleene(beforeSize, sigma, probOr, probKleene, probEmpty);
-        var after = this.#kleene(n-beforeSize, sigma, probOr, probKleene, probEmpty);
+        var before = this.#kleene(beforeSize, probOr, probKleene, probEmpty);
+        var after = this.#kleene(n-beforeSize, probOr, probKleene, probEmpty);
 
         // Apply Or operator between the two with probability probOr
         if (Math.random() <= probOr) {
@@ -256,13 +292,13 @@ class Edge {
      */
     draw(ctx) {
 
-        ctx.strokeStyle = "#000000";
-        ctx.fillStyle = "#000000";
+        ctx.strokeStyle = BLACK;
+        ctx.fillStyle = BLACK;
 
         // Colour edge red if highlighted
         if (this.id == highTid) {
-            ctx.strokeStyle = "#ff0000";
-            ctx.fillStyle = "#ff0000";
+            ctx.strokeStyle = RED;
+            ctx.fillStyle = RED;
         }
 
         ctx.beginPath();
@@ -308,14 +344,14 @@ class Edge {
             ctx.stroke();
             ctx.fill();
 
-            ctx.strokeStyle = "#000000"; // revert colour to black
-            ctx.fillStyle = "#000000";
+            ctx.strokeStyle = BLACK; // revert colour to black
+            ctx.fillStyle = BLACK;
 
             ctx.beginPath();
             ctx.fillText(this.label, x3, y3-4);
             ctx.stroke();
 
-            ctx.fillStyle = "#fcfcfc"
+            ctx.fillStyle = STATEFILL
         } else if (this.curved) { // curved edge between nodes
             var x1 = this.fromNode.x;
             var y1 = this.fromNode.y;
@@ -363,23 +399,23 @@ class Edge {
             ctx.stroke();
             ctx.fill();
 
-            ctx.strokeStyle = "#000000"; // revert colour to black
-            ctx.fillStyle = "#000000";
+            ctx.strokeStyle = BLACK; // revert colour to black
+            ctx.fillStyle = BLACK;
 
             // draw the label at the third point that was created
-            ctx.fillStyle = "#fcfcfc";
+            ctx.fillStyle = STATEFILL;
                 
             var width = ctx.measureText(this.label).width;
 
             ctx.fillRect(x3-width/2, y3-FONTSIZE+2, width, FONTSIZE+2);
 
-            ctx.fillStyle = "#000000";
+            ctx.fillStyle = BLACK;
 
             ctx.beginPath();
             ctx.fillText(this.label, x3, y3);
             ctx.stroke();
 
-            ctx.fillStyle = "#fcfcfc";
+            ctx.fillStyle = STATEFILL;
         } else {
             if (this.id == startTid) { // start edge
                 var toX = this.toNode.x-RADIUS;
@@ -416,8 +452,8 @@ class Edge {
             // Draw chevron at end of edge
             drawChevron(toX, toY, this.angle, Math.PI/6);
 
-            ctx.strokeStyle = "#000000"; // revert colour to black
-            ctx.fillStyle = "#fcfcfc";
+            ctx.strokeStyle = BLACK; // revert colour to black
+            ctx.fillStyle = STATEFILL;
 
             if (this.fromNode != null) {
 
@@ -428,13 +464,13 @@ class Edge {
 
                 ctx.fillRect(x-width/2, y-FONTSIZE+2, width, FONTSIZE+2);
 
-                ctx.fillStyle = "#000000";
+                ctx.fillStyle = BLACK;
 
                 ctx.beginPath();
                 ctx.fillText(this.label, x, y);
                 ctx.stroke();
 
-                ctx.fillStyle = "#fcfcfc";
+                ctx.fillStyle = STATEFILL;
             }
         }
     }
@@ -458,7 +494,7 @@ class Node {
     draw(ctx) {
         // Colour state red if highlighted
         if (this.id == highSid) {
-            ctx.strokeStyle = "#ff0000";
+            ctx.strokeStyle = RED;
         }
 
         // Draw state
@@ -475,14 +511,14 @@ class Node {
             ctx.stroke();
         }
 
-        ctx.strokeStyle = "#000000"; // revert colour to black
+        ctx.strokeStyle = BLACK; // revert colour to black
 
-        ctx.fillStyle = "#000000";
+        ctx.fillStyle = BLACK;
         ctx.beginPath();
         ctx.fillText(this.label, this.x, this.y+5);
         ctx.stroke();
 
-        ctx.fillStyle = "#fcfcfc";
+        ctx.fillStyle = STATEFILL;
     }
 }
 
@@ -1122,14 +1158,25 @@ function updateCanvas(mouseDown) {
     }
 }
 
-var canvas = document.getElementById('flat-canvas');
-// var regex = document.getElementById('regex-generator');
-var ctx = canvas.getContext('2d');
-ctx.fillStyle = "#fcfcfc";
+/**
+ * Generate new regular expression and display to user
+ */
+function gen() {
+    regularExpression.generate();
+    regex.innerHTML = regularExpression.getRegex();
+}
+
+const canvas = document.getElementById('flat-canvas');
+const regex = document.getElementById('regex');
+const ctx = canvas.getContext('2d');
+ctx.fillStyle = STATEFILL;
 ctx.textAlign = "center";
 ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
+
+const regularExpression = new Regex();
+regex.innerHTML = regularExpression.getRegex();
 
 // const regular_expression = new Regex(6, ['a','b'], 0.45, 0.2, 0.1);
 // console.log(regular_expression.regex);

@@ -1,0 +1,11 @@
+h1 {
+    text-align: center;
+}
+
+div.centre {
+    text-align: center;
+}
+
+.no-select {
+    user-select: none;
+}
