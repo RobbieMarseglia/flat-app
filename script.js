@@ -200,9 +200,6 @@ class Regex {
      * @returns {String} Regular expression
      */
     #expression(n, probOr, probKleene, probEmpty) {
-        // if (n == 0) {
-        //     return EPSILON;
-        // } else if (n == 1) {
         if (n < 2) {
             // Randomly select symbol from sigma
             var symbol = SIGMA[Math.floor(Math.random() * SIGMA.length)];
@@ -225,9 +222,6 @@ class Regex {
 
         // Apply Or operator between the two with probability probOr
         if (Math.random() <= probOr) {
-            // if (before == after) {
-            //     return before;
-            // }
             this.postfix += "+";
             return "(" + before + " + " + after + ")";
         }
@@ -1120,20 +1114,57 @@ function updateCanvas(mouseDown) {
 }
 
 /**
- * Returns true if regex and user's machine accept the same language
+ * Returns true if the state transition table is one for a DFA
+ * @param {
+ *  Array<{
+ *      stateID: Number,
+ *      symbol: String,
+ *      stateIDs: Array<Number>
+ *  }>
+ * } table state transition table for an NFA
+ * @returns {Boolean} True if transition table is one for a DFA
+ */
+function dfaTest(table) {
+    for (const symbols of Object.values(table)) {
+        for (const [symbol, ids] of Object.entries(symbols)) {
+            if (symbol != EPSILON) {
+                if (ids.length != 1) {
+                    return false;
+                }
+            } else {
+                if (ids.length != 0) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+/**
+ * Outputs correct if regex and user's machine accept the same language
  */
 function comp() {
     if (startSid != -1) {
-        var regNFA = regularExpression.nfa;
+        var proceed = true;
         var userNFA = transTable();
-        var user = subsetConstruct(userNFA.table, startSid, userNFA.accept, 0);
-        var reg = subsetConstruct(regNFA.table, regNFA.start, [regNFA.end], Object.keys(user.dfa).length)
-        var equal = isomorphic(user, reg);
-        if (equal) {
-            answer.innerHTML = "Correct";
-            answer.style.color = "green";
+        if (document.getElementById('dfa-toggle').checked) {
+            proceed = dfaTest(userNFA.table);
+        }
+        if (proceed) {
+            var regNFA = regularExpression.nfa;
+            var user = subsetConstruct(userNFA.table, startSid, userNFA.accept, 0);
+            var reg = subsetConstruct(regNFA.table, regNFA.start, [regNFA.end], Object.keys(user.dfa).length)
+            var equal = isomorphic(user, reg);
+            if (equal) {
+                answer.innerHTML = "Correct";
+                answer.style.color = "green";
+            } else {
+                answer.innerHTML = "Incorrect";
+                answer.style.color = "red";
+            }
         } else {
-            answer.innerHTML = "Incorrect";
+            answer.innerHTML = "Not a DFA";
             answer.style.color = "red";
         }
     } else {
