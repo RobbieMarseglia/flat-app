@@ -317,6 +317,13 @@ class Edge {
             ctx.fill();
 
             ctx.strokeStyle = BLACK; // revert colour to black
+
+            ctx.fillStyle = STATEFILL;
+                
+            var width = ctx.measureText(this.label).width;
+
+            ctx.fillRect(x3-width/2, y3-4-FONTSIZE+2, width, FONTSIZE+2);
+
             ctx.fillStyle = BLACK;
 
             ctx.beginPath();
@@ -371,7 +378,6 @@ class Edge {
             ctx.fill();
 
             ctx.strokeStyle = BLACK; // revert colour to black
-            ctx.fillStyle = BLACK;
 
             // draw the label at the third point that was created
             ctx.fillStyle = STATEFILL;
