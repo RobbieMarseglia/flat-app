@@ -29,7 +29,6 @@ class Regex {
         this.postfix = "";
         this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
         this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
-        console.log(this.postfix);
     }
 
     /**
@@ -309,7 +308,6 @@ class Edge {
             ctx.stroke();
 
             // Draw chevron at end of arc
-            // drawChevron(x2, y2, this.angle, Math.PI/10);
             ctx.beginPath();
             ctx.moveTo(x2, y2);
             ctx.lineTo(x2+CHEVRON*Math.cos(this.angle-Math.PI/10), y2-CHEVRON*Math.sin(this.angle-Math.PI/10));
@@ -364,7 +362,6 @@ class Edge {
             var beta = Math.atan2(yi-y2,xi-x2);
             
             // dynamically draw chevron
-            // drawChevron(xi, yi, this.angle, Math.PI/5);
             ctx.beginPath();
             ctx.moveTo(xi, yi);
             ctx.lineTo(xi+CHEVRON*Math.cos(beta-Math.PI/5), yi+CHEVRON*Math.sin(beta-Math.PI/5));
@@ -424,7 +421,13 @@ class Edge {
             ctx.stroke();
 
             // Draw chevron at end of edge
-            drawChevron(toX, toY, this.angle, Math.PI/6);
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle - Math.PI/6), toY-CHEVRON*Math.sin(this.angle - Math.PI/6));
+            ctx.lineTo(toX-CHEVRON*Math.cos(this.angle + Math.PI/6), toY-CHEVRON*Math.sin(this.angle + Math.PI/6));
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fill();
 
             ctx.strokeStyle = BLACK; // revert colour to black
             ctx.fillStyle = STATEFILL;
@@ -949,49 +952,10 @@ function transTable() {
         }
     }
 
-    // var nodeClosure = [];
-    // var nodeIds = [];
-    // for (var n of nodes) {
-    //     nodeClosure[n.id] = [];
-    //     nodeIds.push(n.id);
-    // }
-
-    // console.log(nodeSubset([0,1], 'a', nodeClosure, nfa));
-
-    // var s = eClose(nodeIds, nodeClosure, nfa);
-
-    // console.log(nodeClosure);
-
     return {
         table : nfa,
         accept : final
     }
-}
-
-/**
- * Draw arrow (chevron) at the end of an edge
- * @param {Number} x x-coordinate for end of edge
- * @param {Number} y y-coordinate for end of edge
- * @param {Number} angleEdge Angle (radians) between positive x-axis and edge
- * @param {Number} angleHead Angle (radians) between edge and chevron
- */
-function drawChevron(x, y, angleEdge, angleHead) {
-
-    // ctx.beginPath();
-    // ctx.moveTo(xi, yi);
-    // ctx.lineTo(xi+CHEVRON*Math.cos(this.angle-Math.PI/5), yi+CHEVRON*Math.sin(this.angle-Math.PI/5));
-    // ctx.lineTo(xi+CHEVRON*Math.cos(this.angle+Math.PI/5), yi+CHEVRON*Math.sin(this.angle+Math.PI/5));
-    // ctx.closePath();
-    // ctx.stroke();
-    // ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x-CHEVRON*Math.cos(angleEdge - angleHead), y-CHEVRON*Math.sin(angleEdge - angleHead));
-    ctx.lineTo(x-CHEVRON*Math.cos(angleEdge + angleHead), y-CHEVRON*Math.sin(angleEdge + angleHead));
-    ctx.closePath();
-    ctx.stroke();
-    ctx.fill();
 }
 
 /**
@@ -1153,16 +1117,21 @@ function updateCanvas(mouseDown) {
  * Returns true if regex and user's machine accept the same language
  */
 function comp() {
-    var regNFA = regularExpression.nfa;
-    var userNFA = transTable();
-    var user = subsetConstruct(userNFA.table, startSid, userNFA.accept, 0);
-    var reg = subsetConstruct(regNFA.table, regNFA.start, [regNFA.end], Object.keys(user.dfa).length)
-    var equal = isomorphic(user, reg);
-    if (equal) {
-        answer.innerHTML = "Correct";
-        answer.style.color = "green";
+    if (startSid != -1) {
+        var regNFA = regularExpression.nfa;
+        var userNFA = transTable();
+        var user = subsetConstruct(userNFA.table, startSid, userNFA.accept, 0);
+        var reg = subsetConstruct(regNFA.table, regNFA.start, [regNFA.end], Object.keys(user.dfa).length)
+        var equal = isomorphic(user, reg);
+        if (equal) {
+            answer.innerHTML = "Correct";
+            answer.style.color = "green";
+        } else {
+            answer.innerHTML = "Incorrect";
+            answer.style.color = "red";
+        }
     } else {
-        answer.innerHTML = "Incorrect";
+        answer.innerHTML = "No Start State";
         answer.style.color = "red";
     }
 }
@@ -1173,7 +1142,7 @@ function comp() {
 function gen() {
     regularExpression.generate();
     regex.innerHTML = regularExpression.regex;
-    answer.innerHTML = "Draw Machine";
+    answer.innerHTML = "Draw A Machine";
     answer.style.color = "black";
 }
 
@@ -1189,7 +1158,7 @@ var fromY = 0;
 
 const regularExpression = new Regex();
 regex.innerHTML = regularExpression.regex;
-answer.innerHTML = "Draw Machine";
+answer.innerHTML = "Draw A Machine";
 
 // way to do it without?
 var state = null;
@@ -1216,9 +1185,9 @@ window.addEventListener("keydown",
             // Length of current label
             var length = addLabel.label.length;
             // Convert '\e' into EPSILON if read, else add character
-            if (length > 0 && addLabel.label[length-1] == '\\' && event.key == 'e') {
+            if (length > 0 && length < 7 && addLabel.label[length-1] == '\\' && event.key == 'e') {
                 addLabel.label = addLabel.label.slice(0,-1) + EPSILON;
-            } else {
+            } else if (length < 6) {
                 addLabel.label += event.key;
             }
         } else if (event.key == "Backspace") { // delete last character
@@ -1258,6 +1227,9 @@ window.addEventListener("keydown",
                 edges.splice(index,1);
                 highTid = -1;
             }
+        } else if (event.key == "Escape") {
+            highSid = -1;
+            highTid = -1;
         }
 
         updateCanvas(true);
@@ -1407,7 +1379,7 @@ canvas.addEventListener("mousedown",
             var edge = edges[edgeIndex];
             highTid = edge.id;
             highSid = -1;
-        }
+        } 
         updateCanvas(true);
     }
 );
