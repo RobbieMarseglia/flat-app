@@ -18,16 +18,18 @@ var startTid = -1;      // ID of start transition
 
 class Regex {
 
-    constructor() {
-        this.generate();
+    constructor(r, p) {
+        this.generate(r, p);
     }
 
     /**
      * Generate new regular expression and corresponding NFA
      */
-    generate() {
-        this.postfix = "";
-        this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
+    generate(r, p) {
+        // this.postfix = "";
+        this.postfix = p;
+        // this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
+        this.regex = r;
         this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
     }
 
@@ -1177,7 +1179,7 @@ function comp() {
  * Generate new regular expression and display to user
  */
 function gen() {
-    regularExpression.generate();
+    regularExpression.generate("(cac + a* + bb)*", "ca.c.a*bb.++*");
     regex.innerHTML = regularExpression.regex;
     answer.innerHTML = "Draw A Machine";
     answer.style.color = "black";
@@ -1193,7 +1195,7 @@ ctx.font = FONTSIZE + "px Arial";
 var fromX = 0;
 var fromY = 0;
 
-const regularExpression = new Regex();
+const regularExpression = new Regex("(c + ab*)(bba*)*", "cab*.+bb.a*.*.");
 regex.innerHTML = regularExpression.regex;
 answer.innerHTML = "Draw A Machine";
 
