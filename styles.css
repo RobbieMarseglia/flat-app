@@ -1,8 +1,4 @@
-h1 {
-    text-align: center;
-}
-
-div.centre {
+h1,h2,div.centre {
     text-align: center;
 }
 
