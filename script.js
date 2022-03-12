@@ -1179,7 +1179,7 @@ function comp() {
  * Generate new regular expression and display to user
  */
 function gen() {
-    regularExpression.generate("(cac + a* + bb)*", "ca.c.a*bb.++*");
+    regularExpression.generate("(a* + cac + bb)*", "ca.c.a*bb.++*");
     regex.innerHTML = regularExpression.regex;
     answer.innerHTML = "Draw A Machine";
     answer.style.color = "black";
