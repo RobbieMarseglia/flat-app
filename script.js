@@ -28,7 +28,7 @@ class Regex {
     generate() {
         this.postfix = "";
         this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
-        this.nfa = this.#regexToNfa(this.postfix); // construct alongside regex?
+        this.nfa = this.#regexToNfa(this.postfix);
     }
 
     /**
@@ -1197,7 +1197,6 @@ const regularExpression = new Regex();
 regex.innerHTML = regularExpression.regex;
 answer.innerHTML = "Draw A Machine";
 
-// way to do it without?
 var state = null;
 
 /**
