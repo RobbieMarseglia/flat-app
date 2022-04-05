@@ -213,7 +213,6 @@ class Regex {
             return "(" + EPSILON + " + " + after + ")";
         }
 
-        // var beforeSize = Math.floor(Math.random() * n);
         var beforeSize = Math.floor(n/2);
 
         // Generate two sub-expressions
@@ -1421,7 +1420,7 @@ canvas.addEventListener("mousedown",
 );
 
 /**
- * Mouse clicked and held
+ * Mouse moving over canvas
  */
 canvas.addEventListener("mousemove",
     function(event) {
@@ -1443,12 +1442,10 @@ canvas.addEventListener("mousemove",
         fromX = x;
         fromY = y;
 
-        if (state) { // there exists at least one state
-            if (state.dragging) { // the state is being dragged
-                state.x += dx;
-                state.y += dy;
-                updateCanvas(false); // only update if dragging node
-            }
+        if (state && state.dragging) { // there exists a state being dragged
+            state.x += dx;
+            state.y += dy;
+            updateCanvas(false); // only update if dragging node
         }
     }
 );
