@@ -1010,30 +1010,37 @@ function getFromId(id, arr) {
  * @param {Number} y y-position of cursor
  * @returns {Number} Index of edge, or -1 if no edge present
  */
-function edgeUnderMouse(x, y) {
+function edgeUnderMouse(xm, ym) {
     // For each edge
     for (var i=edges.length-1; i >=0; i--) {
         var edge = edges[i];
         if (edge.id != startTid) { // ignore start edge
             if (edge.fromNode == edge.toNode) { // self-loop
-                var dx = edge.x-x;
-                var dy = edge.y-y;
+                var dx = edge.x-xm;
+                var dy = edge.y-ym;
                 // If cursor contained within area of self-loop
                 if (dx*dx+dy*dy < (edge.radius+SELECTAREA)*(edge.radius+SELECTAREA)) {
                     return i;
                 }
             } else { // normal transition
-                var dx = edge.toNode.x - edge.fromNode.x;
-                var dy = edge.toNode.y - edge.fromNode.y;
+                var xf = edge.fromNode.x;
+                var yf = edge.fromNode.y;
+                var xt = edge.toNode.x;
+                var yt = edge.toNode.y;
+                var dx = xt - xf;
+                var dy = yt - yf;
                 var len = Math.sqrt(dx*dx+dy*dy);
                 if (edge.curved) { // curved transition
+                    var ang = 1.5*Math.PI-edge.angle;
+                    var cosShift = 2*SELECTAREA*Math.cos(ang);
+                    var sinShift = 2*SELECTAREA*Math.sin(ang);
                     // Shifts selection window accordingly
-                    var perc = (dx*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle))+dy*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle)))/(len*len);
-                    var dist = (dx*(y-edge.fromNode.y-2*SELECTAREA*Math.sin(1.5*Math.PI-edge.angle))-dy*(x-edge.fromNode.x+2*SELECTAREA*Math.cos(1.5*Math.PI-edge.angle)))/len;
+                    var perc = (dx*(xm-xf+cosShift)+dy*(ym-yf-sinShift))/(len*len);
+                    var dist = (dx*(ym-yf-sinShift)-dy*(xm-xf+cosShift))/len;
                 } else { // straight transition
                     // Regular selection window for transition
-                    var perc = (dx*(x-edge.fromNode.x)+dy*(y-edge.fromNode.y))/(len*len);
-                    var dist = (dx*(y-edge.fromNode.y)-dy*(x-edge.fromNode.x))/len;
+                    var perc = (dx*(xm-xf)+dy*(ym-yf))/(len*len); // how far along transition the mouse is (parallel proportion)
+                    var dist = (dx*(ym-yf)-dy*(xm-xf))/len; // perpendicular distance mouse is away from line equation of transition
                 }
                 // If cursor within selection area
                 if (perc > 0 && perc < 1 && Math.abs(dist) < SELECTAREA) {
