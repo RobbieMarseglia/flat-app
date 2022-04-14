@@ -1462,15 +1462,12 @@ canvas.addEventListener("mousemove",
  */
 canvas.addEventListener("mouseup",
     function(){
-        // If canvas nonempty
-        if (state) {
-            // If currently dragging state
-            if (state.dragging) {
-                // Stop dragging state
-                state.dragging = false;
-                // Return cursor style to pointer
-                canvas.style.cursor = "auto";
-            } 
+        // If canvas nonempty and dragging state
+        if (state && state.dragging) {
+            // Stop dragging state
+            state.dragging = false;
+            // Return cursor style to pointer
+            canvas.style.cursor = "auto";
         }
     }
 );
