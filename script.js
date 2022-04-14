@@ -333,7 +333,7 @@ class Edge {
 
             var dx = x1-x2;
             var dy = y1-y2;
-            // var len = Math.sqrt(dx*dx+dy*dy);
+            
             this.angle = Math.atan2(dy, dx);
 
             var x3 = 0.5*(x1+x2) + 2*SELECTAREA*Math.cos(this.angle - Math.PI/2);
