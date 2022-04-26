@@ -27,7 +27,7 @@ class Regex {
      */
     generate() {
         this.postfix = "";
-        this.regex = this.#kleene(6, 0.5, 0.2, 0.1);
+        this.regex = this.#kleene(7, 0.5, 0.2, 0.1);
         this.nfa = this.#regexToNfa(this.postfix);
     }
 
