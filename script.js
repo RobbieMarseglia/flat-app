@@ -528,7 +528,7 @@ class Node {
  */
 function isomorphic(user, regex) {
     // Array of all accept states (state IDs are unique across both DFAs)
-    const accept  = user.accept.concat(regex.accept);
+    const accept = user.accept.concat(regex.accept);
     // Each state has a set represented by a tree: 'parent' represents the root
     //  of the tree for a given state
     const parent = {};
@@ -565,7 +565,7 @@ function isomorphic(user, regex) {
         pair = pairStack.pop();
         // For each symbol in the alphabet
         for (var c of SIGMA) {
-            // Take transition via 'c' for each DFA and determine which set they belong to
+            // Take transition via 'c' for each state and determine which set they belong to
             //  (i.e., the root of the tree they're in)
             var r1 = 0;
             var r2 = 0;
